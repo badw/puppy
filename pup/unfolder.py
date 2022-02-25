@@ -3,6 +3,17 @@ from phonopy import load
 from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
 from pymatgen.core import Structure
 import itertools as it
+import tqdm
+from ase import io
+from ase.dft.kpoints import *
+import numpy as np 
+from phonopy.file_IO import parse_FORCE_SETS
+from phonopy.interface.vasp import read_vasp 
+from phonopy.structure.cells import get_supercell
+from phonopy import Phonopy
+from phonopy.unfolding.core import Unfolding
+from phonopy.interface.calculator import read_crystal_structure
+from pymatgen.io.phonopy import eigvec_to_eigdispl
 
 class PhononUnfolder:
     

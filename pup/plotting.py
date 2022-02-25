@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
+from matplotlib import colors as mcolors
 
 class UnfolderPlotting:
     
