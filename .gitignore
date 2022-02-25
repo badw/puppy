@@ -1,0 +1,5 @@
+pup/__pycache__
+pup.egg-info
+notebooks/.ipynb_checkpoints
+.ipynb_checkpoints
+pup/.ipynb_checkpoints
