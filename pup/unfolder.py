@@ -3,7 +3,7 @@ from phonopy import load
 from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
 from pymatgen.core import Structure
 import itertools as it
-import tqdm
+from tqdm import tqdm
 from ase import io
 from ase.dft.kpoints import *
 import numpy as np 
