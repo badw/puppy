@@ -28,7 +28,7 @@ class PhononUnfolder:
         return(points)
         
     
-    def get_phonopy_data(self,kpath,line_density=100): # rehash to not use phonopy but pymatgen
+    def get_phonopy_defect_data(self,kpath,line_density=100): # rehash to not use phonopy but pymatgen
         '''generates a phonopy band structure object from the defect supercell'''
         qpoints, connections = get_band_qpoints_and_path_connections(kpath,npoints=line_density)
         ph = load(supercell_filename=os.path.join(self.data['defect_directory'],'SPOSCAR'),
@@ -38,6 +38,18 @@ class PhononUnfolder:
                                  path_connections=connections,
                                  with_eigenvectors='True') # can add with_group_velocities = True
         band_data = ph.get_band_structure_dict()
+        band_data['connections'] = connections
+        return(band_data)
+    
+    def get_phonopy_primitive_data(self,kpath,line_density=100):
+        qpoints,connections = get_band_qpoints_and_path_connections(kpath,npoints=line_density)
+        ph = load(supercell_filename=os.path.join(self.data['host_directory'],'SPOSCAR'),
+                  force_sets_filename=os.path.join(self.data['host_directory'],'FORCE_SETS'),
+                  log_level=0)
+        ph.run_band_structure(qpoints,
+                              path_connections=connections,
+                              with_eigenvectors='False')
+        band_data=ph.get_band_structure_dict()
         band_data['connections'] = connections
         return(band_data)
     
@@ -137,12 +149,13 @@ class PhononUnfolder:
     
     def run_all(self,kpath=None,site_tol=3,sym_tol=0.01,line_density=100,eigendisplacement_atom=None):
         # could be worth having an automatic kpath generator if not defined
-        bs = self.get_phonopy_data(kpath,line_density)
+        bs_d = self.get_phonopy_defect_data(kpath,line_density)
+        bs_p = self.get_phonopy_primitive_data(kpath,line_density)
         s = self.get_neighbour_sites(site_tol)
         pq = self.get_primitive_qpts(kpath,sym_tol,line_density)
         u = self.phonon_unfolder(pq)
         if not eigendisplacement_atom == None:
-            e = self.get_eigendisplacements(bs,s[eigendisplacement_atom])
-            return({'bs':bs,'sites':s,'prim_data':pq,'unfolded_data':u,'eigendisplacements':e})
+            e = self.get_eigendisplacements(bs_d,s[eigendisplacement_atom])
+            return({'bs':bs_d,'bs_p':bs_p,'sites':s,'prim_data':pq,'unfolded_data':u,'eigendisplacements':e})
         else:
-            return({'bs':bs,'sites':s,'prim_data':pq,'unfolded_data':u})
+            return({'bs':bs_d,'bs_p':bs_p,'sites':s,'prim_data':pq,'unfolded_data':u})

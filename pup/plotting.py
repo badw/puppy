@@ -8,7 +8,7 @@ class UnfolderPlotting:
     def __init__(self,data):
         self.data = data
         
-    def single_plot(self,ax,i,threshold,s):
+    def single_plot(self,ax,i,threshold,s,primitive_bs=False):
         ax = ax
         
         labels = self.data[i]['prim_data']['label']
@@ -41,7 +41,7 @@ class UnfolderPlotting:
         print(formatted_labels)
         
         
-    def single_plot_with_weight(self,ax,threshold,s):
+    def single_plot_with_weight(self,ax,threshold,s,primitive_bs=False,primitive_color='tab:blue'):
         ax = ax
         
         labels = self.data['prim_data']['label']
@@ -64,6 +64,10 @@ class UnfolderPlotting:
             ax.scatter(q,uf[j],c=col[j],s=s,edgecolor=None,linewidths=0,norm=norm)
 
         formatted_labels = ['$\\Gamma$' if x == 'G' else x for x in labels]   
+        
+        if primitive_bs == True:
+            bs_p_f = self.data['bs_p']['frequencies'][-1]
+            ax.plot(pq,bs_p_f[::-1],color=primitive_color,label='bulk')
         
         
         ax.set_xlim(np.min(pq),np.max(pq))
