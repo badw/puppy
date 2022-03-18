@@ -147,7 +147,7 @@ class PhononUnfolder:
 
         return({'f':freqs,'w':weights})
     
-    def run_all(self,kpath=None,site_tol=3,sym_tol=0.01,line_density=100,eigendisplacement_atom=None):
+    def _run_all_legacy(self,kpath=None,site_tol=3,sym_tol=0.01,line_density=100,eigendisplacement_atom=None):
         # could be worth having an automatic kpath generator if not defined
         bs_d = self.get_phonopy_defect_data(kpath,line_density)
         bs_p = self.get_phonopy_primitive_data(kpath,line_density)
@@ -159,3 +159,20 @@ class PhononUnfolder:
             return({'bs':bs_d,'bs_p':bs_p,'sites':s,'prim_data':pq,'unfolded_data':u,'eigendisplacements':e})
         else:
             return({'bs':bs_d,'bs_p':bs_p,'sites':s,'prim_data':pq,'unfolded_data':u})
+        
+    def run_all(self,kpaths=None,site_tol=3,sym_tol=0.01,line_density=100,eigendisplacement_atom=None):
+        # could be worth having an automatic kpath generator if not defined
+        bs_p = self.get_phonopy_primitive_data([kpaths[kpath] for kpath in kpaths],line_density) # do the primitive kpoints all in one
+        
+        data = {}
+        for kpath in tqdm(kpaths): # this can be multiprocessed in future
+            bs_d = self.get_phonopy_defect_data(kpaths[kpath],line_density)
+            s = self.get_neighbour_sites(site_tol)
+            pq = self.get_primitive_qpts(kpaths[kpath],sym_tol,line_density)
+            u = self.phonon_unfolder(pq)
+            if not eigendisplacement_atom == None:
+                e = self.get_eigendisplacements(bs_d,s[eigendisplacement_atom])
+                data[kpath] = {'bs':bs_d,'sites':s,'prim_data':pq,'unfolded_data':u,'eigendisplacements':e}
+            else:
+                data[kpath] = {'bs':bs_d,'sites':s,'prim_data':pq,'unfolded_data':u}
+        return({'data':data,'prim':bs_p})
