@@ -15,5 +15,5 @@ setup(
     author_email="benjamin.williamson@ntnu.no",
     license='MIT',
     packages=find_packages(),
-    install_requires=['pymatgen','numpy','itertools','phonopy','matplotlib','ase']
+    install_requires=['pymatgen','numpy','phonopy','matplotlib','ase']
     )
