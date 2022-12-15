@@ -7,10 +7,10 @@ from os.path import abspath, dirname
 from setuptools import find_packages, setup
 
 setup(
-    name='pup',
+    name='puppy',
     version='1.0.0',
     description='unfolding phonons and plotting with projections',
-    url="https://github.com/badw/pup",
+    url="https://github.com/badw/puppy",
     author="Benjamin A. D. Williamson",
     author_email="benjamin.williamson@ntnu.no",
     license='MIT',

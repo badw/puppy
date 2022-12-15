@@ -25,7 +25,13 @@ class PhononUnfolder:
     def get_possible_path(self,tol):
         atoms = io.read(filename=os.path.join(self.data['host_directory'],'POSCAR')) 
         points = get_special_points(atoms.cell, eps=tol)
-        return(points)
+        kpath  = {}
+        lists = list(points.keys())
+        for i,k in enumerate(lists):
+            if not i == len(lists)-1:
+                k1,k2 = lists[i],lists[i+1]
+                kpath['{}-{}'.format(k1,k2)] = [points[k1],points[k2]]
+        return(kpath)
         
     
     def get_phonopy_defect_data(self,kpath,line_density=100): # rehash to not use phonopy but pymatgen

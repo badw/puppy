@@ -153,9 +153,9 @@ class UnfolderPlotting:
         labels = list(it.chain(*labels))
         labels = [x for i,x in enumerate(labels) if not labels[i-1] == x]
         formatted_labels = ['$\\Gamma$' if x == 'G' else x for x in labels]  
-        lines = list(dict.fromkeys(np.cumsum(lines)))
+        nlines = list(dict.fromkeys(np.cumsum(lines)))
         
         ax.set_xlim(0,maxpq)
-        ax.set_xticks(lines)
+        ax.set_xticks(nlines)
         ax.set_xticklabels(formatted_labels)
-        vline = [ax.axvline(x,color='k') for x in lines[1:-1]]
+        vline = [ax.axvline(x,color='k') for x in nlines[1:-1]]
