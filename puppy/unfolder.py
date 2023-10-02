@@ -13,6 +13,7 @@ from phonopy.structure.cells import get_supercell
 from phonopy import Phonopy
 from phonopy.unfolding.core import Unfolding
 from phonopy.interface.calculator import read_crystal_structure
+from phonopy.phonon.band_structure import BandStructure, get_band_qpoints_by_seekpath
 from pymatgen.io.phonopy import eigvec_to_eigdispl
 
 class PhononUnfolder:
@@ -22,7 +23,7 @@ class PhononUnfolder:
         self.expansion = expansion
         self.progress = kwargs['tqdm_disable']
         
-    def get_possible_path(self,tol):
+    def get_possible_path(self,tol=0.01):
         atoms = io.read(filename=os.path.join(self.data['host_directory'],'POSCAR')) 
         points = get_special_points(atoms.cell, eps=tol)
         kpath  = {}
@@ -32,37 +33,60 @@ class PhononUnfolder:
                 k1,k2 = lists[i],lists[i+1]
                 kpath['{}-{}'.format(k1,k2)] = [points[k1],points[k2]]
         return(kpath)
-        
     
-    def get_phonopy_defect_data(self,kpath,line_density=100): # rehash to not use phonopy but pymatgen
-        '''generates a phonopy band structure object from the defect supercell'''
-        qpoints, connections = get_band_qpoints_and_path_connections(kpath,npoints=line_density)
+    def get_phonopy_defect_data_2(self,line_density=101): # rehash to not use phonopy but pymatgen
+        '''generates a phonopy band structure object from the defect supercell
+        todo:
+        * make it so you can use .gz files
+        * add custom kpoint path without the kernel crashing'''
+        bands,labels,path_connections = get_band_qpoints_by_seekpath(primitive=self.primitive,
+                                                             npoints=line_density,
+                                                             is_const_interval=True)
         ph = load(supercell_filename=os.path.join(self.data['defect_directory'],'SPOSCAR'),
                   force_sets_filename=os.path.join(self.data['defect_directory'],'FORCE_SETS'),
                   log_level=0)
-        ph.run_band_structure(qpoints,
-                                 path_connections=connections,
-                                 with_eigenvectors='True') # can add with_group_velocities = True
+        ph.run_band_structure(bands,
+                              with_eigenvectors=True,
+                              path_connections=path_connections,
+                              labels=labels)
         band_data = ph.get_band_structure_dict()
-        band_data['connections'] = connections
-        return(band_data)
+        self.defect_band_data = band_data
+        self.defect_band_data['connections'] = path_connections
+        self.supercell = ph.supercell
+        self.defect_phonons = ph
+        self.labels = labels
+        self.special_points = [x[0] for x in ph.band_structure.qpoints]
+        self.special_points.append(ph.band_structure.qpoints[-1][-1])
     
-    def get_phonopy_primitive_data(self,kpath,line_density=100):
-        qpoints,connections = get_band_qpoints_and_path_connections(kpath,npoints=line_density)
+    def get_phonopy_primitive_data_2(self,line_density=101):
+        '''todo:
+        * make it so you can use .gz files
+        * add custom kpoint path without the kernel crashing'''
         ph = load(supercell_filename=os.path.join(self.data['host_directory'],'SPOSCAR'),
                   force_sets_filename=os.path.join(self.data['host_directory'],'FORCE_SETS'),
                   log_level=0)
-        ph.run_band_structure(qpoints,
-                              path_connections=connections,
-                              with_eigenvectors='False')
+        ph.auto_band_structure(with_eigenvectors='False')
         band_data=ph.get_band_structure_dict()
-        band_data['connections'] = connections
-        return(band_data)
+        self.primitive_band_data = band_data
+        self.primitive = ph.primitive
+        self.primitive_phonons = ph
     
-    def get_primitive_qpts(self,kpath,tol=0.01,line_density=100):
-        atoms = io.read(filename=os.path.join(self.data['host_directory'],'POSCAR')) 
-        points = get_special_points(atoms.cell, eps=tol)
+    @staticmethod   
+    def label_formatter(labels,special_points):
+        labs = []
+        for i,j in enumerate(labels):
+            if j == '$\\Gamma$':
+                labs.append({'G':special_points[i]})
+            else:
+                clean = j.split('$')[1].split('{')[1].split('}')[0]            
+                labs.append({clean:special_points[i]})
+        return(labs)
+
+    def get_primitive_qpts(self,tol=0.01,line_density=100):
+        points = get_special_points(self.primitive.cell, eps=tol)
+        kpath = self.label_formatter(self.labels,self.special_points)
         Q = [x for k in kpath for x,y in points.items() if all(y==k)]
+        Q = list(points)
         path = bandpath(Q,atoms.cell,line_density) 
         qpts = path.kpts
         (q,line,label) = path.get_linear_kpoint_axis()        
@@ -79,39 +103,7 @@ class PhononUnfolder:
                                 if struct.sites[x].species_string == elem]
         return(neighbours)
     
-    def get_eigendisplacements(self,band_data,sites):
-    
-        supercell, _ = read_crystal_structure(os.path.join(self.data['defect_directory'],'SPOSCAR'),
-                                              interface_mode='vasp')
-        atom_coords = supercell.get_scaled_positions()
-        num_atoms = supercell.get_number_of_atoms()
-        masses = supercell.get_masses()
-        qpoints = band_data['qpoints'] # what is this all about? surely we should do more?
-        distances = band_data['distances']
-        frequencies = band_data['frequencies']
-        eigenvectors = band_data['eigenvectors']
-        connections = band_data['connections']
-        true_q = [i for i in connections if i]        
-        iterations = int(np.product(np.shape(eigenvectors)[0:3]))
-        
-
-        
-        total = [] # we want one "displacement" per qpoint and frequency based on sites in radius around defect
-        with tqdm(total=iterations,disable=self.progress) as pbar:
-            for i in range(len(true_q)):
-                total.append([])
-                for q in range(len(qpoints[i])):
-                    total[i].append([])
-                    for w in range(len(frequencies[i][q])):
-                
-                        mean = [[np.linalg.norm(eigvec_to_eigdispl(eigenvectors[i][q][w][at],
-                                                                              q=qpoints[i][q],
-                                                                              frac_coords=atom_coords[at],
-                                                                              mass=masses[at])) for elem in sites if elem == at] for at in range(num_atoms)]
-                        total[i][q].append(np.mean(list(it.chain(*mean))))
-                        pbar.update(1)
-   
-        return(total)
+     
 
     def phonon_unfolder(self,prim_data): # could make it allow alloys in future
         #preamble setup 
@@ -152,19 +144,6 @@ class PhononUnfolder:
         freqs = unfold.get_frequencies()
 
         return({'f':freqs,'w':weights})
-    
-    def _run_all_legacy(self,kpath=None,site_tol=3,sym_tol=0.01,line_density=100,eigendisplacement_atom=None):
-        # could be worth having an automatic kpath generator if not defined
-        bs_d = self.get_phonopy_defect_data(kpath,line_density)
-        bs_p = self.get_phonopy_primitive_data(kpath,line_density)
-        s = self.get_neighbour_sites(site_tol)
-        pq = self.get_primitive_qpts(kpath,sym_tol,line_density)
-        u = self.phonon_unfolder(pq)
-        if not eigendisplacement_atom == None:
-            e = self.get_eigendisplacements(bs_d,s[eigendisplacement_atom])
-            return({'bs':bs_d,'bs_p':bs_p,'sites':s,'prim_data':pq,'unfolded_data':u,'eigendisplacements':e})
-        else:
-            return({'bs':bs_d,'bs_p':bs_p,'sites':s,'prim_data':pq,'unfolded_data':u})
         
     def run_all(self,kpaths=None,site_tol=3,sym_tol=0.01,line_density=100,eigendisplacement_atom=None):
         # could be worth having an automatic kpath generator if not defined

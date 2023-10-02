@@ -1,0 +1,5 @@
+pymatgen
+numpy
+phonopy
+matplotlib
+ase

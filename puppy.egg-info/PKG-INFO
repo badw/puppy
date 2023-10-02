@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: puppy
+Version: 1.0.0
+Summary: unfolding phonons and plotting with projections
+Home-page: https://github.com/badw/puppy
+Author: Benjamin A. D. Williamson
+Author-email: benjamin.williamson@ntnu.no
+License: MIT
+License-File: LICENSE
