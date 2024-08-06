@@ -22,6 +22,7 @@ class PhononUnfolder:
         self.data = dict_of_locations
         self.expansion = expansion
         self.progress = kwargs['tqdm_disable']
+        self.line_density = 101
         
     def get_possible_path(self,tol=0.01):
         atoms = io.read(filename=os.path.join(self.data['host_directory'],'POSCAR')) 
@@ -103,7 +104,38 @@ class PhononUnfolder:
                                 if struct.sites[x].species_string == elem]
         return(neighbours)
     
-     
+    def get_eigendisplacements(self,band_data,sites):
+    
+        supercell, _ = read_crystal_structure(os.path.join(self.data['defect_directory'],'SPOSCAR'),
+                                              interface_mode='vasp')
+        atom_coords = supercell.get_scaled_positions()
+        num_atoms = supercell.get_number_of_atoms()
+        masses = supercell.get_masses()
+        qpoints = band_data['qpoints'] # what is this all about? surely we should do more?
+        distances = band_data['distances']
+        frequencies = band_data['frequencies']
+        eigenvectors = np.asarray(band_data['eigenvectors'],dtype='object') # check this!!!!!!
+        connections = band_data['connections']
+        true_q = [i for i in connections if i]        
+        #iterations = int(np.product(np.shape(eigenvectors)[0:3]))
+        
+
+        
+        total = [] # we want one "displacement" per qpoint and frequency based on sites in radius around defect
+        #with tqdm(total=iterations,disable=self.progress) as pbar:
+        for i in range(len(true_q)):
+            total.append([])
+            for q in range(len(qpoints[i])):
+                total[i].append([])
+                for w in range(len(frequencies[i][q])):
+                
+                    mean = [[np.linalg.norm(eigvec_to_eigdispl(eigenvectors[i][q][w][at],
+                                                                          q=qpoints[i][q],
+                                                                          frac_coords=atom_coords[at],
+                                                                          mass=masses[at])) for elem in sites if elem == at] for at in range(num_atoms)]
+                    total[i][q].append(np.mean(list(it.chain(*mean))))
+   
+        return(total)
 
     def phonon_unfolder(self,prim_data): # could make it allow alloys in future
         #preamble setup 
