@@ -18,7 +18,7 @@ setup(
     install_requires=['tqdm',
                       'pymatgen==2024.4.13',
                       'numpy==1.26.4',
-                      'phonopy=2.21.0',
+                      'phonopy==2.21.0',
                       'matplotlib',
                       'ase==3.23.0'],
     python_requires=">=3.10",
