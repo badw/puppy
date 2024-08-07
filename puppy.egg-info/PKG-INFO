@@ -7,3 +7,9 @@ Author: Benjamin A. D. Williamson
 Author-email: benjamin.williamson@ntnu.no
 License: MIT
 License-File: LICENSE
+Requires-Dist: tqdm
+Requires-Dist: pymatgen
+Requires-Dist: numpy
+Requires-Dist: phonopy
+Requires-Dist: matplotlib
+Requires-Dist: ase

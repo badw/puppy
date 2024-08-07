@@ -14,6 +14,6 @@ setup(
     author="Benjamin A. D. Williamson",
     author_email="benjamin.williamson@ntnu.no",
     license='MIT',
-    packages=find_packages(),
-    install_requires=['pymatgen','numpy','phonopy','matplotlib','ase']
+    packages=['puppy'],
+    install_requires=['tqdm','pymatgen','numpy','phonopy','matplotlib','ase']
     )

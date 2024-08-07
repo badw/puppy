@@ -1,3 +1,4 @@
+tqdm
 pymatgen
 numpy
 phonopy
