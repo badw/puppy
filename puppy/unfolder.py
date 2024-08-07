@@ -129,10 +129,11 @@ class PhononUnfolder:
                 total[i].append([])
                 for w in range(len(frequencies[i][q])):
                 
-                    mean = [[np.linalg.norm(eigvec_to_eigdispl(eigenvectors[i][q][w][at],
-                                                                          q=qpoints[i][q],
-                                                                          frac_coords=atom_coords[at],
-                                                                          mass=masses[at])) for elem in sites if elem == at] for at in range(num_atoms)]
+                    mean = [
+                        [np.linalg.norm(eigvec_to_eigdispl(eigenvectors[i][q][w][at],
+                                                           q=qpoints[i][q],
+                                                           frac_coords=atom_coords[at],
+                                                           mass=masses[at])) for elem in sites if elem == at] for at in range(num_atoms)]
                     total[i][q].append(np.mean(list(it.chain(*mean))))
    
         return(total)
