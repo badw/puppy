@@ -1,7 +1,7 @@
 # Phonon Unfolding and Projections (Puppy)
 
 <p align="center">
-<img src="./unfolded.png" width="600" height="600">
+<img src="./unfolded.png" height="600">
 </p>
 
 ## Installation
@@ -13,7 +13,7 @@ pip install puppy
 ## Pre-Workflow
 
 <p align="center">
-<img src="./workflow.png" width="600" height="600">
+<img src="./workflow.png" height="600">
 </p>
 
 ## Usage
