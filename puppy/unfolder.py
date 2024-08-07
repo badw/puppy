@@ -203,8 +203,7 @@ class PhononUnfoldingandProjection:
 
         if with_prim:
             for dist,freq in zip(self.host_band_data['distances'],self.host_band_data['frequencies']):
-                axes[0].plot(dist,freq,color='tab:blue',alpha=0.5)
-                axes[1].plot(dist,freq,color='tab:blue',alpha=0.5)
+                [ax.plot(dist,freq,color='tab:blue',alpha=0.5) for ax in axes]
 
         axisvlines = [0]
 
@@ -239,7 +238,7 @@ class PhononUnfoldingandProjection:
                         for w1 in range(len(unfolded_weights[i]))]
                 
             for ii,qq in enumerate(qpts):
-                fig.axes[count].scatter(x=qq,y=unfolded_freq[i][ii],c=cols[ii],edgecolor=None,linewidths=0,norm=norm,s=5)
+                fig.axes[count].scatter(x=qq,y=unfolded_freq[i][ii],c=cols[ii],edgecolor=None,linewidths=0,norm=norm,s=2)
             
             if not connect:
                 if not i == totallen:
