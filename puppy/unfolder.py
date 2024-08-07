@@ -1,16 +1,13 @@
 # get primitive data and band structure 
-import gzip,os
-import tqdm_pathos 
+import gzip
+import os
 from tqdm import tqdm
 import itertools as it 
 import copy 
 from phonopy import load
-from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
-from tqdm import tqdm
 import numpy as np 
-from phonopy import Phonopy
 from phonopy.unfolding.core import Unfolding
-from phonopy.phonon.band_structure import BandStructure, get_band_qpoints_by_seekpath
+from phonopy.phonon.band_structure import get_band_qpoints_by_seekpath
 from pymatgen.io.phonopy import eigvec_to_eigdispl
 from pymatgen.core import Structure
 

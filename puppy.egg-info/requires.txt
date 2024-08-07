@@ -1,6 +1,0 @@
-tqdm
-pymatgen
-numpy
-phonopy
-matplotlib
-ase
