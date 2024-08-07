@@ -1,4 +1,4 @@
 # puppy
 phonon unfolding and projections
 
-<img src="./example/unfolded.png" width="600" height="600">
+<img src="./unfolded.png" width="600" height="600">
