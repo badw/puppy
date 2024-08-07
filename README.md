@@ -1,7 +1,8 @@
 # Phonon Unfolding and Projections (Puppy)
 
+<p align="center">
 <img src="./unfolded.png" width="600" height="600">
-
+</p>
 ## Installation
 
 ```
