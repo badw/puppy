@@ -10,6 +10,12 @@
 pip install puppy
 ```
 
+## Pre-Workflow
+
+<p align="center">
+<img src="./workflow.png" width="600" height="600">
+</p>
+
 ## Usage
 
 see `notebooks/example.ipynb` for an example usage
@@ -19,3 +25,4 @@ see `notebooks/example.ipynb` for an example usage
 - [ ] multiprocess some features
 - [ ] add a spectral function
 - [ ] change from a scatter plot 
+- [ ] make it work for non vacancies
