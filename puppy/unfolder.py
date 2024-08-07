@@ -198,6 +198,9 @@ class PhononUnfoldingandProjection:
 
         fig,axes = plt.subplots(ncols=axiscount,figsize=(6,6),dpi=300,sharey=True,gridspec_kw={'width_ratios':sizing})
 
+        if axiscount == 1:
+            axes = [axes]
+
         if with_prim:
             for dist,freq in zip(self.host_band_data['distances'],self.host_band_data['frequencies']):
                 axes[0].plot(dist,freq,color='tab:blue',alpha=0.5)
