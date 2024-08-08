@@ -173,7 +173,8 @@ class PhononUnfoldingandProjection:
                     prim_colour='tab:Blue',
                     threshold=0.1,
                     atom='Li',
-                    ylim=None):
+                    ylim=None,
+                    show_lines=True):
                 
         import matplotlib.pyplot as plt 
         import matplotlib.colors as mcolors
@@ -228,15 +229,18 @@ class PhononUnfoldingandProjection:
 
         totallen = len(distances)
         count = 0 
-        fig.axes[count].axvline(axisvlines[0])
+        if show_lines:
+            fig.axes[count].axvline(axisvlines[0])
 
         for i,(l,connect,label) in enumerate(zip(distances,path_connections,labels)):
             
             if not l[0] in axisvlines:
-                fig.axes[count].axvline(l[0],color='k')
+                if show_lines:
+                    fig.axes[count].axvline(l[0],color='k')
                 axisvlines.append(l[0])
             if not l[-1] in axisvlines:
-                fig.axes[count].axvline(l[0],color='k')
+                if show_lines:
+                    fig.axes[count].axvline(l[0],color='k')
                 axisvlines.append(l[-1])
 
             qpts = [[q for x in range(len(unfolded_freq[i][0]))] for q in line[i]]
