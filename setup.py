@@ -20,7 +20,8 @@ setup(
                       'numpy==1.26.4',
                       'phonopy==2.21.0',
                       'matplotlib',
-                      'ase==3.23.0'],
+                      'ase==3.23.0',
+                      'doped'],
     python_requires=">=3.10",
     classifiers=[
             "Programming Language :: Python :: 3.10",

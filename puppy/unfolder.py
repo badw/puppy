@@ -18,15 +18,15 @@ class PhononUnfoldingandProjection:
                  defect_directory,
                  host_directory,
                  line_density,
-                 expansion,
+                 #expansion,
                  nearest_neighbour_tolerance):
         self.defect_directory = defect_directory
         self.host_directory = host_directory
         self.line_density = line_density
-        self.expansion = expansion
+        #self.expansion = expansion
         self.nearest_neighbour_tolerance = nearest_neighbour_tolerance
         vacancy_index = defect_from_structures(Structure.from_file(host_directory+'SPOSCAR.gz'),Structure.from_file(defect_directory+'SPOSCAR.gz'))
-        print("{} (index = {})".format(vacancy_index,vacancy_index.defect_site_index))
+        print("found {} (index = {})".format(vacancy_index,vacancy_index.defect_site_index))
         self.defect_index = vacancy_index.defect_site_index
 
     def file_unzip(self, 
@@ -172,14 +172,22 @@ class PhononUnfoldingandProjection:
                     with_prim=False,
                     prim_colour='tab:Blue',
                     threshold=0.1,
-                    atom='Li'):
+                    atom='Li',
+                    ylim=None):
                 
         import matplotlib.pyplot as plt 
         import matplotlib.colors as mcolors
-        from sumo.plotting import sumo_base_style
-        plt.style.use(sumo_base_style)
+        from matplotlib.lines import Line2D
 
 
+        legend_lines = [
+            Line2D([0], [0], color=base_colour, alpha=0.5, lw=2),
+            Line2D([0], [0], color=(0.1, 0.1, 0.1), lw=2)
+        ]
+        legend_handles = ['vacancy adjacent {} atoms'.format(atom),
+                        'defect cell']
+
+        
         unfolded_weights = copy.deepcopy(self.unfold_data['w'])
         unfolded_freq = self.unfold_data['f']
 
@@ -211,7 +219,10 @@ class PhononUnfoldingandProjection:
 
         if with_prim:
             for dist,freq in zip(self.host_band_data['distances'],self.host_band_data['frequencies']):
-                [ax.plot(dist,freq,color=prim_colour,alpha=0.5) for ax in axes]
+                [ax.plot(dist,freq,color=prim_colour) for ax in axes]
+
+            legend_lines.append(Line2D([0],[0],color=prim_colour,lw=2))
+            legend_handles.append('primitive cell')
 
         axisvlines = [0]
 
@@ -275,7 +286,15 @@ class PhononUnfoldingandProjection:
             l_count += len(spts)        
         
         axes[0].set_ylabel('Frequency (THz)')
+        if not ylim:
+            mi = np.min(self.defect_band_data['frequencies'])
+            ma = np.max(self.defect_band_data['frequencies'])
+            axes[0].set_ylim(np.round(mi)-2,np.round(ma)+2) 
+        else:
+            axes[0].set_ylim(ylim[0],ylim[1])
+
+        fig.legend(legend_lines,legend_handles,edgecolor='black',facecolor='white',framealpha=1,loc='upper right',bbox_to_anchor=(0.5,0.95))
         plt.tight_layout()   
         plt.show() 
 
-        return(fig)
+        return(fig,axes)
