@@ -10,6 +10,7 @@ from phonopy.unfolding.core import Unfolding
 from phonopy.phonon.band_structure import get_band_qpoints_by_seekpath
 from pymatgen.io.phonopy import eigvec_to_eigdispl
 from pymatgen.core import Structure
+from doped.analysis import defect_from_structures
 
 class PhononUnfoldingandProjection:
 
@@ -18,14 +19,15 @@ class PhononUnfoldingandProjection:
                  host_directory,
                  line_density,
                  expansion,
-                 defect_index,
                  nearest_neighbour_tolerance):
         self.defect_directory = defect_directory
         self.host_directory = host_directory
         self.line_density = line_density
         self.expansion = expansion
-        self.defect_index = defect_index
         self.nearest_neighbour_tolerance = nearest_neighbour_tolerance
+        vacancy_index = defect_from_structures(Structure.from_file(host_directory+'SPOSCAR.gz'),Structure.from_file(defect_directory+'SPOSCAR.gz'))
+        print("{} (index = {})".format(vacancy_index,vacancy_index.defect_site_index))
+        self.defect_index = vacancy_index.defect_site_index
 
     def file_unzip(self, 
                    files):
@@ -35,6 +37,8 @@ class PhononUnfoldingandProjection:
             if os.path.exists(file):
                 with gzip.open(file, 'rb') as f_in, open(file.replace('.gz', ''), 'wb') as f_out:
                     f_out.writelines(f_in)
+
+    
 
     def get_neighbour_sites(self):
         self.file_unzip([self.host_directory+'SPOSCAR.gz'])
@@ -164,7 +168,11 @@ class PhononUnfoldingandProjection:
 
         self.unfold_data = {'f':frequencies,'w':weights}
 
-    def plot_unfold(self,base_colour=(0.1,0.1,0.1),with_prim=False,threshold=0.1,atom='Li'):
+    def plot_unfold(self,base_colour=(0.1,0.1,0.1),
+                    with_prim=False,
+                    prim_colour='tab:Blue',
+                    threshold=0.1,
+                    atom='Li'):
                 
         import matplotlib.pyplot as plt 
         import matplotlib.colors as mcolors
@@ -203,7 +211,7 @@ class PhononUnfoldingandProjection:
 
         if with_prim:
             for dist,freq in zip(self.host_band_data['distances'],self.host_band_data['frequencies']):
-                [ax.plot(dist,freq,color='tab:blue',alpha=0.5) for ax in axes]
+                [ax.plot(dist,freq,color=prim_colour,alpha=0.5) for ax in axes]
 
         axisvlines = [0]
 
