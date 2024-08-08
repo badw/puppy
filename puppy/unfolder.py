@@ -38,8 +38,6 @@ class PhononUnfoldingandProjection:
                 with gzip.open(file, 'rb') as f_in, open(file.replace('.gz', ''), 'wb') as f_out:
                     f_out.writelines(f_in)
 
-    
-
     def get_neighbour_sites(self):
         self.file_unzip([self.host_directory+'SPOSCAR.gz'])
 
@@ -51,6 +49,8 @@ class PhononUnfoldingandProjection:
         for elem in unique_elements:
             neighbours[elem] = [x for x in nearest_neighbours 
                                 if struct.sites[x].species_string == elem]
+            
+        print(neighbours)
         return(neighbours)
         
 
