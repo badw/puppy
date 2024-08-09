@@ -241,7 +241,6 @@ class PhononUnfoldingandProjection:
         for i in range(len(unfolded_weights)):
             unfolded_weights[i][unfolded_weights[i]<threshold] = 0
 
-        norm = mcolors.Normalize(vmin=np.min(unfolded_weights),vmax=np.max(unfolded_weights))
 
         line = self.host_band_data['distances']
         path_connections = self.path_connections
@@ -292,6 +291,8 @@ class PhononUnfoldingandProjection:
             if self.eigendisplacements and atom:
                 ed = self.eigendisplacements[atom]
                 max_disp = np.max(ed)
+
+                norm = mcolors.Normalize(vmin=np.min(ed/max_disp),vmax=np.max(ed/max_disp))
 
                 cols = [[mcolors.to_rgba([(ed[i][w1][w2]/max_disp)*base_colour[0],
                                           (ed[i][w1][w2]/max_disp) *
