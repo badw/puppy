@@ -88,10 +88,13 @@ class PhononUnfoldingandProjection:
         self.host_phonons = ph
         self.matrix = np.abs(np.linalg.inv(self.host_phonons.primitive_matrix).round(0))
     
-    def eigenvectors_to_eigendisplacements(self, all_atoms = None):
+    def eigenvectors_to_eigendisplacements(self, all_atoms = None, project_specific_sites=None):
 
         if not all_atoms:
-            nn = self.get_neighbour_sites()
+            if not project_specific_sites:
+                nn = self.get_neighbour_sites()
+            else:
+                nn = project_specific_sites
         else:
             nn = self.get_all_atoms_of_a_type(all_atoms)
 
@@ -123,28 +126,7 @@ class PhononUnfoldingandProjection:
                         else:
                             mean_eigdispl = 0
                         eigendisplacements[atom][i][ii].append(mean_eigdispl)
-#        for atom,sites in tqdm(nn.items(),desc='generating eigendisplacements...'):
-#            eigendisplacements[atom] = []
-#            for i,group in enumerate(eigenvecs):
-#                eigendisplacements[atom].append([])
-#                for ii,line in enumerate(group):
-#                    eigendisplacements[atom][i].append([])
-#                    for iii,freq in enumerate(line):
-#                        mean = [
-#                            [
-#                                np.linalg.norm(
-#                                    eigvec_to_eigdispl(
-#                                        freq[at:at+3],
-#                                        q=qpts[i][ii],
-#                                        frac_coords=atom_coords[at],
-#                                        mass=masses[at]
-#                                    )
-#                                )
-#                                for elem in sites if elem == at
-#                            ]
-#                            for at in range(num_atoms)
-#                        ]
-#                        eigendisplacements[atom][i][ii].append(np.mean(list(it.chain(*mean))))
+
         self.eigendisplacements = eigendisplacements
 
     def get_defect_phonons(self):
