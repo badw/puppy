@@ -260,7 +260,7 @@ class PhononUnfoldingandProjection:
         count = 0 
         if show_lines:
             fig.axes[count].axvline(axisvlines[0])
-        colourmap = mpl.cm.get_cmap(cmap)
+        colourmap = mpl.colormaps[cmap]
         for i,(l,connect,label) in enumerate(zip(distances,path_connections,labels)):
             
             if not l[0] in axisvlines:
