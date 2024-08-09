@@ -49,9 +49,14 @@ class PhononUnfoldingandProjection:
         for elem in unique_elements:
             neighbours[elem] = [x for x in nearest_neighbours 
                                 if struct.sites[x].species_string == elem]
-            
-        print(neighbours)
         return(neighbours)
+    
+    def get_all_atoms_of_a_type(self,atom_type=None):
+        struct = Structure.from_file(self.host_directory+'SPOSCAR')
+        return({atom_type:
+                [i for i,index in enumerate(struct) 
+                 if index.species_string == atom_type]})
+
         
 
     def get_host_phonons(self):
@@ -81,39 +86,65 @@ class PhononUnfoldingandProjection:
         self.labels=labels
         self.host = ph.primitive
         self.host_phonons = ph
+        self.matrix = np.abs(np.linalg.inv(self.host_phonons.primitive_matrix).round(0))
     
-    def eigenvectors_to_eigendisplacements(self):
-        nn = self.get_neighbour_sites()
+    def eigenvectors_to_eigendisplacements(self, all_atoms = None):
+
+        if not all_atoms:
+            nn = self.get_neighbour_sites()
+        else:
+            nn = self.get_all_atoms_of_a_type(all_atoms)
+
         atom_coords = self.defect_phonons.supercell.get_scaled_positions()
-        num_atoms = self.defect_phonons.supercell.get_number_of_atoms()
+        #num_atoms = self.defect_phonons.supercell.get_number_of_atoms()
         masses = self.defect_phonons.supercell.get_masses()
         #
         eigenvecs = self.defect_band_data['eigenvectors']
-        qpts = self.host_band_data['qpoints']        
+        qpts = self.defect_band_data['qpoints']        
         
         eigendisplacements = {}
-        for atom,sites in tqdm(nn.items(),desc='generating eigendisplacements...'):
+        for atom,sites in tqdm(nn.items(),desc='generating_eigendisplacements...'):
             eigendisplacements[atom] = []
-            for i,group in enumerate(eigenvecs):
+            for i, group in enumerate(eigenvecs):
                 eigendisplacements[atom].append([])
-                for ii,line in enumerate(group):
+                for ii, line in enumerate(group):
                     eigendisplacements[atom][i].append([])
-                    for iii,freq in enumerate(line):
-                        mean = [
-                            [
-                                np.linalg.norm(
-                                    eigvec_to_eigdispl(
-                                        freq[at],
-                                        q=qpts[i][ii],
-                                        frac_coords=atom_coords[at],
-                                        mass=masses[at]
-                                    )
-                                )
-                                for elem in sites if elem == at
-                            ]
-                            for at in range(num_atoms)
-                        ]
-                        eigendisplacements[atom][i][ii].append(np.mean(list(it.chain        (*mean))))
+                    for iii, freq in enumerate(line):
+                        eigdispl = [
+                            np.linalg.norm(
+                                eigvec_to_eigdispl(
+                                    freq[site:site+3],
+                                    q=qpts[i][ii],
+                                    frac_coords=atom_coords[site],
+                                    mass=masses[site])
+                            ) for site in sites if site]
+                        if eigdispl:
+                            mean_eigdispl = np.mean(eigdispl)
+                        else:
+                            mean_eigdispl = 0
+                        eigendisplacements[atom][i][ii].append(mean_eigdispl)
+#        for atom,sites in tqdm(nn.items(),desc='generating eigendisplacements...'):
+#            eigendisplacements[atom] = []
+#            for i,group in enumerate(eigenvecs):
+#                eigendisplacements[atom].append([])
+#                for ii,line in enumerate(group):
+#                    eigendisplacements[atom][i].append([])
+#                    for iii,freq in enumerate(line):
+#                        mean = [
+#                            [
+#                                np.linalg.norm(
+#                                    eigvec_to_eigdispl(
+#                                        freq[at:at+3],
+#                                        q=qpts[i][ii],
+#                                        frac_coords=atom_coords[at],
+#                                        mass=masses[at]
+#                                    )
+#                                )
+#                                for elem in sites if elem == at
+#                            ]
+#                            for at in range(num_atoms)
+#                        ]
+#                        eigendisplacements[atom][i][ii].append(np.mean(list(it.chain(*mean))))
         self.eigendisplacements = eigendisplacements
 
     def get_defect_phonons(self):
@@ -174,12 +205,26 @@ class PhononUnfoldingandProjection:
                     threshold=0.1,
                     atom='Li',
                     ylim=None,
-                    show_lines=True):
+                    show_lines=True,
+                    plot_kws=None,
+                    legend_kws=None):
                 
         import matplotlib.pyplot as plt 
         import matplotlib.colors as mcolors
         from matplotlib.lines import Line2D
-
+        
+        if not plot_kws:
+            plot_kws = {'edgecolor':None,
+                        'linewidths':0,
+                        's':2,
+                        'rasterized':True}
+            
+        if not legend_kws:
+            legend_kws = {'bbox_to_anchor':[0.5,0.9],
+                          'edgecolor':'black',
+                          'loc':'upper right',
+                          'framealpha':1,
+                          'facecolor':'white'}
 
         legend_lines = [
             Line2D([0], [0], color=base_colour, alpha=0.5, lw=2),
@@ -261,7 +306,11 @@ class PhononUnfoldingandProjection:
                         for w1 in range(len(unfolded_weights[i]))]
                 
             for ii,qq in enumerate(qpts):
-                fig.axes[count].scatter(x=qq,y=unfolded_freq[i][ii],c=cols[ii],edgecolor=None,linewidths=0,norm=norm,s=2)
+                fig.axes[count].scatter(x=qq,
+                                        y=unfolded_freq[i][ii],
+                                        c=cols[ii],
+                                        norm=norm,
+                                        **plot_kws)
             
             if not connect:
                 if not i == totallen:
@@ -297,7 +346,7 @@ class PhononUnfoldingandProjection:
         else:
             axes[0].set_ylim(ylim[0],ylim[1])
 
-        fig.legend(legend_lines,legend_handles,edgecolor='black',facecolor='white',framealpha=1,loc='upper right',bbox_to_anchor=(0.5,0.95))
+        fig.legend(legend_lines,legend_handles,**legend_kws)
         plt.tight_layout()   
         plt.show() 
 
