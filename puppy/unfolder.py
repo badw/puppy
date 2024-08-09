@@ -184,6 +184,7 @@ class PhononUnfoldingandProjection:
     def plot_unfold(self,base_colour=(0.1,0.1,0.1),
                     with_prim=False,
                     prim_colour='tab:Blue',
+                    cmap='viridis',
                     threshold=0.1,
                     atom='Li',
                     ylim=None,
@@ -194,6 +195,7 @@ class PhononUnfoldingandProjection:
         import matplotlib.pyplot as plt 
         import matplotlib.colors as mcolors
         from matplotlib.lines import Line2D
+        import matplotlib as mpl 
         
         if not plot_kws:
             plot_kws = {'edgecolor':None,
@@ -237,9 +239,10 @@ class PhononUnfoldingandProjection:
 
         import collections
 
-        sizing = collections.Counter(path_connections[:-1]).values()
+        sizing = list(collections.Counter(path_connections[:-1]).values())
+        sizing.append(0.2)
 
-        fig,axes = plt.subplots(ncols=axiscount,figsize=(6,6),dpi=300,sharey=True,gridspec_kw={'width_ratios':sizing})
+        fig,axes = plt.subplots(ncols=axiscount+1,figsize=(6,6),dpi=300,gridspec_kw={'width_ratios':sizing})
 
         if axiscount == 1:
             axes = [axes]
@@ -257,7 +260,7 @@ class PhononUnfoldingandProjection:
         count = 0 
         if show_lines:
             fig.axes[count].axvline(axisvlines[0])
-
+        colourmap = mpl.cm.get_cmap(cmap)
         for i,(l,connect,label) in enumerate(zip(distances,path_connections,labels)):
             
             if not l[0] in axisvlines:
@@ -276,12 +279,15 @@ class PhononUnfoldingandProjection:
 
                 norm = mcolors.Normalize(vmin=np.min(ed/max_disp),vmax=np.max(ed/max_disp))
 
-                cols = [[mcolors.to_rgba([(ed[i][w1][w2]/max_disp)*base_colour[0],
-                                          (ed[i][w1][w2]/max_disp) *
-                                          base_colour[1],
-                                          (ed[i][w1][w2]/max_disp)*base_colour[2]], alpha=unfolded_weights[i][w1][w2])
+                cols = [[colourmap(ed[i][w1][w2]/max_disp,alpha=unfolded_weights[i][w1][w2])
                          for w2 in range(len(unfolded_weights[i][w1]))]
                         for w1 in range(len(unfolded_weights[i]))]
+                #cols = [[mcolors.to_rgba([(ed[i][w1][w2]/max_disp)*base_colour[0],
+                #                          (ed[i][w1][w2]/max_disp) *
+                #                          base_colour[1],
+                #                          (ed[i][w1][w2]/max_disp)*base_colour[2]], alpha=unfolded_weights[i][w1][w2])
+                #         for w2 in range(len(unfolded_weights[i][w1]))]
+                #        for w1 in range(len(unfolded_weights[i]))]
 
             else:
                 cols = [[mcolors.to_rgba(base_colour, alpha=unfolded_weights[i][w1][w2])
@@ -315,20 +321,26 @@ class PhononUnfoldingandProjection:
 
         l_count = 0         
 
-        for ax, spts in zip(axes,special_points):
+        for ax, spts in zip(axes[:-1],special_points):
             ax.set_xticks(spts)
             ax.set_xlim(spts[0],spts[-1])
             ax.set_xticklabels(labels[l_count : (l_count + len(spts))])
             l_count += len(spts)        
         
         axes[0].set_ylabel('Frequency (THz)')
+
+
+
         if not ylim:
             mi = np.min(self.defect_band_data['frequencies'])
             ma = np.max(self.defect_band_data['frequencies'])
-            axes[0].set_ylim(np.round(mi)-2,np.round(ma)+2) 
+            [ax.set_ylim(np.round(mi)-2,np.round(ma)+2) for ax in axes[0:-1]]
         else:
-            axes[0].set_ylim(ylim[0],ylim[1])
+            [ax.set_ylim(ylim[0],ylim[1]) for ax in axes[0:-1]]
 
+        mpl.colorbar.Colorbar(axes[-1],cmap=cmap,norm=norm)
+
+        axes[-1].set_ylabel('normalised displacement (arb. units)')
         fig.legend(legend_lines,legend_handles,**legend_kws)
         plt.tight_layout()   
         plt.show() 
