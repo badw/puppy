@@ -244,12 +244,12 @@ class PhononUnfoldingandProjection:
 
         fig,axes = plt.subplots(ncols=axiscount+1,figsize=(6,6),dpi=300,gridspec_kw={'width_ratios':sizing})
 
-        if axiscount == 1:
-            axes = [axes]
+        #if axiscount == 1:
+        #    axes = [axes]
 
         if with_prim:
             for dist,freq in zip(self.host_band_data['distances'],self.host_band_data['frequencies']):
-                [ax.plot(dist,freq,color=prim_colour) for ax in axes]
+                [ax.plot(dist,freq,color=prim_colour,zorder=1) for ax in axes[:-1]]
 
             legend_lines.append(Line2D([0],[0],color=prim_colour,lw=2))
             legend_handles.append('primitive cell')
@@ -282,12 +282,6 @@ class PhononUnfoldingandProjection:
                 cols = [[colourmap(ed[i][w1][w2]/max_disp,alpha=unfolded_weights[i][w1][w2])
                          for w2 in range(len(unfolded_weights[i][w1]))]
                         for w1 in range(len(unfolded_weights[i]))]
-                #cols = [[mcolors.to_rgba([(ed[i][w1][w2]/max_disp)*base_colour[0],
-                #                          (ed[i][w1][w2]/max_disp) *
-                #                          base_colour[1],
-                #                          (ed[i][w1][w2]/max_disp)*base_colour[2]], alpha=unfolded_weights[i][w1][w2])
-                #         for w2 in range(len(unfolded_weights[i][w1]))]
-                #        for w1 in range(len(unfolded_weights[i]))]
 
             else:
                 cols = [[mcolors.to_rgba(base_colour, alpha=unfolded_weights[i][w1][w2])
