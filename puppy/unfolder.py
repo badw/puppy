@@ -189,8 +189,6 @@ class PhononUnfoldingandProjection:
                     threshold=0.1,
                     atom='Li',
                     ylim=None,
-                    vmin=None,
-                    vmax=None,
                     show_lines=True,
                     plot_kws=None,
                     legend_kws=None):
@@ -280,10 +278,9 @@ class PhononUnfoldingandProjection:
                 ed = self.eigendisplacements[atom]
                 max_disp = np.max(ed)
                 
-                if not vmin or vmax:
-                    norm = mcolors.Normalize(vmin=np.min(ed/max_disp),vmax=np.max(ed/max_disp))
-                else:
-                    norm = mcolors.Normalize(vmin=vmin,vmax=vmax)
+
+                norm = mcolors.Normalize(vmin=np.min(ed),vmax=np.max(ed))
+
 
                 cols = [[colourmap(ed[i][w1][w2]/max_disp,alpha=unfolded_weights[i][w1][w2])
                          for w2 in range(len(unfolded_weights[i][w1]))]
