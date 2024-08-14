@@ -18,7 +18,6 @@ class PhononUnfoldingandProjection:
                  defect_directory,
                  host_directory,
                  line_density,
-                 #expansion,
                  nearest_neighbour_tolerance):
         self.defect_directory = defect_directory
         self.host_directory = host_directory
@@ -103,7 +102,7 @@ class PhononUnfoldingandProjection:
         masses = self.defect_phonons.supercell.get_masses()
         #
         eigenvecs = self.defect_band_data['eigenvectors']
-        qpts = self.defect_band_data['qpoints']        
+        qpts = self.defect_band_data['qpoints']
         
         eigendisplacements = {}
         for atom,sites in tqdm(nn.items(),desc='generating_eigendisplacements...'):
@@ -159,10 +158,12 @@ class PhononUnfoldingandProjection:
     def unfold(self):
 
         def mp_function(qpoints):
+            if not self.matrix.any():
+                self.matrix = np.abs(np.linalg.inv(self.defect_phonons.primitive_matrix).round(0))
             mapping = [x for x in range(self.host_phonons.get_supercell().get_number_of_atoms())]
             mapping[self.defect_index] = None
             unfold = Unfolding(phonon = self.defect_phonons,
-                   supercell_matrix = np.abs(np.linalg.inv(self.host_phonons.primitive_matrix).round(0)),
+                   supercell_matrix = self.matrix,
                    ideal_positions=self.host_phonons.get_supercell().get_scaled_positions(),
                    atom_mapping = mapping,
                    qpoints = qpoints
@@ -188,6 +189,8 @@ class PhononUnfoldingandProjection:
                     threshold=0.1,
                     atom='Li',
                     ylim=None,
+                    vmin=None,
+                    vmax=None,
                     show_lines=True,
                     plot_kws=None,
                     legend_kws=None):
@@ -276,8 +279,11 @@ class PhononUnfoldingandProjection:
             if self.eigendisplacements and atom:
                 ed = self.eigendisplacements[atom]
                 max_disp = np.max(ed)
-
-                norm = mcolors.Normalize(vmin=np.min(ed/max_disp),vmax=np.max(ed/max_disp))
+                
+                if not vmin or vmax:
+                    norm = mcolors.Normalize(vmin=np.min(ed/max_disp),vmax=np.max(ed/max_disp))
+                else:
+                    norm = mcolors.Normalize(vmin=vmin,vmax=vmax)
 
                 cols = [[colourmap(ed[i][w1][w2]/max_disp,alpha=unfolded_weights[i][w1][w2])
                          for w2 in range(len(unfolded_weights[i][w1]))]
