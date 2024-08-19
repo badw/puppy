@@ -232,15 +232,24 @@ class PhononUnfoldingandProjection:
         labels =self.labels
         distances = self.host_band_data['distances']
 
-        axiscount = 1
-        for i,x in enumerate(path_connections[:-1]):
-            if i > 0 :
-                if not path_connections[i] == path_connections[i-1]:
-                    axiscount+=1
+        #axiscount = 1
+        #for i,x in enumerate(path_connections[:-1]):
+        #    if i > 0 :
+        #        if not path_connections[i] == path_connections[i-1]:
+        #            axiscount+=1
 
-        import collections
+        lefts = [0] 
+        rights = []
+        for i, c in enumerate(path_connections):
+            if not c:
+                lefts.append(i + 1)
+                rights.append(i)
 
-        sizing = list(collections.Counter(path_connections[:-1]).values())
+        seg_indices = [list(range(lft, rgt + 1)) for lft, rgt in zip(lefts, rights)]
+        axiscount = len(seg_indices)
+        sizing = [len(x) for x in seg_indices]
+
+        #sizing = list(collections.Counter(path_connections[:-1]).values())
         sizing.append(0.2)
 
         fig,axes = plt.subplots(ncols=axiscount+1,figsize=(6,6),dpi=300,gridspec_kw={'width_ratios':sizing})
@@ -279,7 +288,7 @@ class PhononUnfoldingandProjection:
                 max_disp = np.max(ed)
                 
 
-                norm = mcolors.Normalize(vmin=np.min(ed),vmax=np.max(ed))
+                norm = mcolors.Normalize(vmin=np.min(ed/max_disp),vmax=np.max(ed/max_disp))
 
 
                 cols = [[colourmap(ed[i][w1][w2]/max_disp,alpha=unfolded_weights[i][w1][w2])
