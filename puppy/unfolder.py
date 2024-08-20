@@ -191,7 +191,8 @@ class PhononUnfoldingandProjection:
                     ylim=None,
                     show_lines=True,
                     plot_kws=None,
-                    legend_kws=None):
+                    legend_kws=None,
+                    figsize=(8,8)):
                 
         import matplotlib.pyplot as plt 
         import matplotlib.colors as mcolors
@@ -252,7 +253,7 @@ class PhononUnfoldingandProjection:
         #sizing = list(collections.Counter(path_connections[:-1]).values())
         sizing.append(0.2)
 
-        fig,axes = plt.subplots(ncols=axiscount+1,figsize=(6,6),dpi=300,gridspec_kw={'width_ratios':sizing})
+        fig,axes = plt.subplots(ncols=axiscount+1,figsize=figsize,dpi=300,gridspec_kw={'width_ratios':sizing})
 
         #if axiscount == 1:
         #    axes = [axes]
