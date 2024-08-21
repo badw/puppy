@@ -379,9 +379,16 @@ class PhononUnfoldingandProjection:
         if not ylim:
             mi = np.min(self.defect_band_data['frequencies'])
             ma = np.max(self.defect_band_data['frequencies'])
-            [ax.set_ylim(np.round(mi)-2,np.round(ma)+2) for ax in axes[0:-1]]
+            if show_colourbar:
+                [ax.set_ylim(np.round(mi)-2,np.round(ma)+2) for ax in axes[0:-1]]
+            else:
+                [ax.set_ylim(np.round(mi)-2,np.round(ma)+2) for ax in axes]
+                
         else:
-            [ax.set_ylim(ylim[0],ylim[1]) for ax in axes[0:-1]]
+            if show_colourbar:
+                [ax.set_ylim(ylim[0],ylim[1]) for ax in axes[0:-1]]
+            else:
+                [ax.set_ylim(ylim[0],ylim[1]) for ax in axes]
         
         if show_colourbar:
             mpl.colorbar.Colorbar(axes[-1],cmap=cmap,norm=norm)
