@@ -51,6 +51,7 @@ class PhononUnfoldingandProjection:
             struct.append(species=use_dummy_atom,coords=self.defect_site.frac_coords)
         struct.to(filename=filename,fmt='poscar')
         print('vacancy "cage" saved to {}.'.format(filename))
+        return(struct)
 
     def get_neighbour_sites(self):
             
