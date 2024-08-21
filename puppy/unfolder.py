@@ -87,44 +87,76 @@ class PhononUnfoldingandProjection:
         self.host_phonons = ph
         self.matrix = np.abs(np.linalg.inv(self.host_phonons.primitive_matrix).round(0))
     
-    def eigenvectors_to_eigendisplacements(self, all_atoms = None, project_specific_sites=None):
 
+    def eigenvectors_to_eigendisplacements(self, all_atoms=None, project_specific_sites=None, direction=None):
         if not all_atoms:
             if not project_specific_sites:
                 nn = self.get_neighbour_sites()
             else:
                 nn = project_specific_sites
         else:
-            nn = self.get_all_atoms_of_a_type(all_atoms)
+            nn = self.get_all_atoms_of_a_type(all_atoms)    
 
         atom_coords = self.defect_phonons.supercell.get_scaled_positions()
-        #num_atoms = self.defect_phonons.supercell.get_number_of_atoms()
+        # num_atoms = self.defect_phonons.supercell.get_number_of_atoms()
         masses = self.defect_phonons.supercell.get_masses()
         #
         eigenvecs = self.defect_band_data['eigenvectors']
-        qpts = self.defect_band_data['qpoints']
-        
-        eigendisplacements = {}
-        for atom,sites in tqdm(nn.items(),desc='generating_eigendisplacements...'):
-            eigendisplacements[atom] = []
-            for i, group in enumerate(eigenvecs):
-                eigendisplacements[atom].append([])
-                for ii, line in enumerate(group):
-                    eigendisplacements[atom][i].append([])
-                    for iii, freq in enumerate(line):
-                        eigdispl = [
-                            np.linalg.norm(
+        qpts = self.defect_band_data['qpoints']    
+
+        if not direction:
+            eigendisplacements = {}
+            for atom, sites in tqdm(nn.items(),desc='generating_eigendisplacements...'):
+                eigendisplacements[atom] = []
+                for i, group in enumerate(eigenvecs):
+                    eigendisplacements[atom].append([])
+                    for ii, line in enumerate(group):
+                        eigendisplacements[atom][i].append([])
+                        for iii, freq in enumerate(line):
+                            eigdispl = [
+                                np.linalg.norm(
+                                    eigvec_to_eigdispl(
+                                        freq[site:site+3],
+                                        q=qpts[i][ii],
+                                        frac_coords=atom_coords[site],
+                                        mass=masses[site])
+                                ) for site in sites if site]
+                            if eigdispl:
+                                mean_eigdispl = np.mean(eigdispl)
+                            else:
+                                mean_eigdispl = 0
+                            eigendisplacements[atom][i][ii].append(
+                                mean_eigdispl)    
+
+        else:
+            if direction in ['x', 'a']:
+                _direc = 0
+            elif direction in ['y', 'b']:
+                _direc = 1
+            elif direction in ['z', 'c']:
+                _direc = 2
+            eigendisplacements = {}
+            for atom, sites in tqdm(nn.items(),desc='generating_eigendisplacements...'):
+                eigendisplacements[atom] = []
+                for i, group in enumerate(eigenvecs):
+                    eigendisplacements[atom].append([])
+                    for ii, line in enumerate(group):
+                        eigendisplacements[atom][i].append([])
+                        for iii, freq in enumerate(line):
+                            eigdispl = [np.linalg.norm(
                                 eigvec_to_eigdispl(
-                                    freq[site:site+3],
-                                    q=qpts[i][ii],
-                                    frac_coords=atom_coords[site],
-                                    mass=masses[site])
-                            ) for site in sites if site]
-                        if eigdispl:
-                            mean_eigdispl = np.mean(eigdispl)
-                        else:
-                            mean_eigdispl = 0
-                        eigendisplacements[atom][i][ii].append(mean_eigdispl)
+                                        freq[site:site+3],
+                                        q=qpts[i][ii],
+                                        frac_coords=atom_coords[site],
+                                        mass=masses[site])[_direc]
+                                        )
+                                for site in sites if site]
+                            if eigdispl:
+                                mean_eigdispl = np.mean(eigdispl)
+                            else:
+                                mean_eigdispl = 0
+                            eigendisplacements[atom][i][ii].append(
+                                mean_eigdispl)    
 
         self.eigendisplacements = eigendisplacements
 
