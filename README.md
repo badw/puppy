@@ -15,7 +15,7 @@ pip install puppy
 ## Pre-Workflow
 
 <p align="center">
-<img src="./workflow.png" height="600">
+<img src="./workflow.gif" height="600">
 </p>
 
 ## Usage
