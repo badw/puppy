@@ -301,7 +301,7 @@ class PhononUnfoldingandProjection:
         distances = self.host_band_data['distances']
 
         if not np.any(custom_axes):
-            sizing = self.axes_sizing(self.path_connections,show_colourbar=show_colourbar)
+            sizing = self.axes_sizing(self.path_connections,with_colourbar=show_colourbar)
             axiscount = len(sizing)
             fig,axes = plt.subplots(ncols=axiscount,figsize=figsize,dpi=300,gridspec_kw={'width_ratios':sizing})
         else:
