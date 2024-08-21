@@ -27,6 +27,7 @@ class PhononUnfoldingandProjection:
         vacancy_index = defect_from_structures(Structure.from_file(host_directory+'SPOSCAR.gz'),Structure.from_file(defect_directory+'SPOSCAR.gz'))
         print("found {} (index = {})".format(vacancy_index,vacancy_index.defect_site_index))
         self.defect_index = vacancy_index.defect_site_index
+        self.defect_site = vacancy_index.defect_site
 
     def file_unzip(self, 
                    files):
@@ -37,17 +38,37 @@ class PhononUnfoldingandProjection:
                 with gzip.open(file, 'rb') as f_in, open(file.replace('.gz', ''), 'wb') as f_out:
                     f_out.writelines(f_in)
 
-    def get_neighbour_sites(self):
-        self.file_unzip([self.host_directory+'SPOSCAR.gz'])
+    def save_poscar_with_only_neighbours(filename='poscar_reduced.vasp',use_dummy_atom='K'):
+        struct = Structure.from_file(self.defect_directory+'SPOSCAR')
+        nn = self.get_neighbour_sites()
+        indexes = []
+        for x in nn.values():
+            for ix in x:
+                indexes.append(ix)
+        non_indexes = [x for x in range(len(struct)) if x not in list(indexes)]
+        struct.remove_sites(non_indexes)
+        if use_dummy_atom:
+            struct.append(species=use_dummy_atom,coords=self.defect_site.frac_coords)
+        struct.to(filename=filename,fmt='poscar')
+        print('vacancy "cage" saved to {}.'.format(filename))
 
-        struct = Structure.from_file(self.host_directory+'SPOSCAR')
-        nearest_neighbours = struct.get_neighbor_list(self.nearest_neighbour_tolerance,
-                                                      sites=[struct.sites[self.defect_index]])[1]
+
+
+
+    def get_neighbour_sites(self):
+            
+        self.file_unzip([self.defect_directory+'SPOSCAR.gz'])
+        struct = Structure.from_file(self.defect_directory+'SPOSCAR')
+        nearest_neighbours = struct.get_neighbors_in_shell(origin=self.defect_site.coords,
+                                                           r=0,
+                                                           dr=self.nearest_neighbour_tolerance,
+                                                           )
         unique_elements = list(dict.fromkeys([x.species_string for x in struct.sites]))
         neighbours = {}
         for elem in unique_elements:
-            neighbours[elem] = [x for x in nearest_neighbours 
-                                if struct.sites[x].species_string == elem]
+            neighbours[elem] = [x.index for x in nearest_neighbours
+                                if x.species_string == elem]
+        
         return(neighbours)
     
     def get_all_atoms_of_a_type(self,atom_type=None):
@@ -98,9 +119,7 @@ class PhononUnfoldingandProjection:
             nn = self.get_all_atoms_of_a_type(all_atoms)    
 
         atom_coords = self.defect_phonons.supercell.get_scaled_positions()
-        # num_atoms = self.defect_phonons.supercell.get_number_of_atoms()
         masses = self.defect_phonons.supercell.get_masses()
-        #
         eigenvecs = self.defect_band_data['eigenvectors']
         qpts = self.defect_band_data['qpoints']    
 
@@ -213,6 +232,7 @@ class PhononUnfoldingandProjection:
             weights.append(wts)
 
         self.unfold_data = {'f':frequencies,'w':weights}
+
 
     @staticmethod
     def axes_sizing(path_connections,with_colourbar=True):
