@@ -38,7 +38,7 @@ class PhononUnfoldingandProjection:
                 with gzip.open(file, 'rb') as f_in, open(file.replace('.gz', ''), 'wb') as f_out:
                     f_out.writelines(f_in)
 
-    def save_poscar_with_only_neighbours(filename='poscar_reduced.vasp',use_dummy_atom='K'):
+    def save_poscar_with_only_neighbours(self,filename='poscar_reduced.vasp',use_dummy_atom='K'):
         struct = Structure.from_file(self.defect_directory+'SPOSCAR')
         nn = self.get_neighbour_sites()
         indexes = []
@@ -51,9 +51,6 @@ class PhononUnfoldingandProjection:
             struct.append(species=use_dummy_atom,coords=self.defect_site.frac_coords)
         struct.to(filename=filename,fmt='poscar')
         print('vacancy "cage" saved to {}.'.format(filename))
-
-
-
 
     def get_neighbour_sites(self):
             
