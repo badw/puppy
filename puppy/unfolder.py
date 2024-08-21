@@ -214,7 +214,24 @@ class PhononUnfoldingandProjection:
 
         self.unfold_data = {'f':frequencies,'w':weights}
 
-    def plot_unfold(self,base_colour=(0.1,0.1,0.1),
+    @staticmethod
+    def axes_sizing(path_connections,with_colourbar=True):
+        lefts = [0] 
+        rights = []
+        for i, c in enumerate(path_connections):
+            if not c:
+                lefts.append(i + 1)
+                rights.append(i)
+
+        seg_indices = [list(range(lft, rgt + 1)) for lft, rgt in zip(lefts, rights)]
+        sizing = [len(x) for x in seg_indices]
+        if with_colourbar:
+            sizing.append(0.2) # for the colourbar
+        return(sizing)
+
+    def plot_unfold(self,
+                    custom_axes=None,
+                    base_colour=(0.1,0.1,0.1),
                     with_prim=False,
                     prim_colour='tab:Blue',
                     cmap='viridis',
@@ -224,7 +241,8 @@ class PhononUnfoldingandProjection:
                     show_lines=True,
                     plot_kws=None,
                     legend_kws=None,
-                    figsize=(8,8)):
+                    figsize=(8,8),
+                    show_colourbar=True):
                 
         import matplotlib.pyplot as plt 
         import matplotlib.colors as mcolors
@@ -265,30 +283,12 @@ class PhononUnfoldingandProjection:
         labels =self.labels
         distances = self.host_band_data['distances']
 
-        #axiscount = 1
-        #for i,x in enumerate(path_connections[:-1]):
-        #    if i > 0 :
-        #        if not path_connections[i] == path_connections[i-1]:
-        #            axiscount+=1
-
-        lefts = [0] 
-        rights = []
-        for i, c in enumerate(path_connections):
-            if not c:
-                lefts.append(i + 1)
-                rights.append(i)
-
-        seg_indices = [list(range(lft, rgt + 1)) for lft, rgt in zip(lefts, rights)]
-        axiscount = len(seg_indices)
-        sizing = [len(x) for x in seg_indices]
-
-        #sizing = list(collections.Counter(path_connections[:-1]).values())
-        sizing.append(0.2)
-
-        fig,axes = plt.subplots(ncols=axiscount+1,figsize=figsize,dpi=300,gridspec_kw={'width_ratios':sizing})
-
-        #if axiscount == 1:
-        #    axes = [axes]
+        if not np.any(custom_axes):
+            sizing = self.axes_sizing(self.path_connections,show_colourbar=show_colourbar)
+            axiscount = len(sizing)
+            fig,axes = plt.subplots(ncols=axiscount,figsize=figsize,dpi=300,gridspec_kw={'width_ratios':sizing})
+        else:
+            axes = custom_axes
 
         if with_prim:
             for dist,freq in zip(self.host_band_data['distances'],self.host_band_data['frequencies']):
@@ -302,17 +302,17 @@ class PhononUnfoldingandProjection:
         totallen = len(distances)
         count = 0 
         if show_lines:
-            fig.axes[count].axvline(axisvlines[0])
+            axes[count].axvline(axisvlines[0])
         colourmap = mpl.colormaps[cmap]
         for i,(l,connect,label) in enumerate(zip(distances,path_connections,labels)):
             
             if not l[0] in axisvlines:
                 if show_lines:
-                    fig.axes[count].axvline(l[0],color='k')
+                    axes[count].axvline(l[0],color='k')
                 axisvlines.append(l[0])
             if not l[-1] in axisvlines:
                 if show_lines:
-                    fig.axes[count].axvline(l[0],color='k')
+                    axes[count].axvline(l[0],color='k')
                 axisvlines.append(l[-1])
 
             qpts = [[q for x in range(len(unfolded_freq[i][0]))] for q in line[i]]
@@ -334,7 +334,7 @@ class PhononUnfoldingandProjection:
                         for w1 in range(len(unfolded_weights[i]))]
                 
             for ii,qq in enumerate(qpts):
-                fig.axes[count].scatter(x=qq,
+                axes[count].scatter(x=qq,
                                         y=unfolded_freq[i][ii],
                                         c=cols[ii],
                                         norm=norm,
@@ -359,16 +359,22 @@ class PhononUnfoldingandProjection:
                 special_points.append(pts)        
 
         l_count = 0         
-
-        for ax, spts in zip(axes[:-1],special_points):
-            ax.set_xticks(spts)
-            ax.set_xlim(spts[0],spts[-1])
-            ax.set_xticklabels(labels[l_count : (l_count + len(spts))])
-            l_count += len(spts)        
         
-        axes[0].set_ylabel('Frequency (THz)')
+        if show_colourbar:
+            for ax, spts in zip(axes[:-1],special_points):
+                ax.set_xticks(spts)
+                ax.set_xlim(spts[0],spts[-1])
+                ax.set_xticklabels(labels[l_count : (l_count + len(spts))])
+                l_count += len(spts)  
 
+        else:
+            for ax, spts in zip(axes,special_points):
+                ax.set_xticks(spts)
+                ax.set_xlim(spts[0],spts[-1])
+                ax.set_xticklabels(labels[l_count : (l_count + len(spts))])
+                l_count += len(spts)  
 
+        
 
         if not ylim:
             mi = np.min(self.defect_band_data['frequencies'])
@@ -376,12 +382,19 @@ class PhononUnfoldingandProjection:
             [ax.set_ylim(np.round(mi)-2,np.round(ma)+2) for ax in axes[0:-1]]
         else:
             [ax.set_ylim(ylim[0],ylim[1]) for ax in axes[0:-1]]
+        
+        if show_colourbar:
+            mpl.colorbar.Colorbar(axes[-1],cmap=cmap,norm=norm)
+            axes[-1].set_ylabel('normalised displacement (arb. units)')
 
-        mpl.colorbar.Colorbar(axes[-1],cmap=cmap,norm=norm)
+        if not np.any(custom_axes):
+            axes[0].set_ylabel('Frequency (THz)')
+            fig.legend(legend_lines,legend_handles,**legend_kws)
+        else:
+            axes[0].legend(legend_lines,legend_handles,**legend_kws)
 
-        axes[-1].set_ylabel('normalised displacement (arb. units)')
-        fig.legend(legend_lines,legend_handles,**legend_kws)
-        plt.tight_layout()   
-        plt.show() 
-
-        return(fig,axes)
+        if not np.any(custom_axes):
+            fig.tight_layout()
+            #plt.tight_layout()   
+            #plt.show() 
+            return(fig,axes)
