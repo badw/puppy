@@ -44,7 +44,8 @@ class PhononUnfoldingandProjection:
                                          use_dummy_atom='K',
                                          with_vectors=False,
                                          vector_args=None,
-                                         scale=2):
+                                         scale=2,
+                                         chosen_index=None):
         struct = Structure.from_file(self.defect_directory+'SPOSCAR')
         eigenvectors = self.defect_band_data['eigenvectors']
         host_frequencies = self.host_band_data['frequencies']
@@ -79,8 +80,8 @@ class PhononUnfoldingandProjection:
 
             df = pd.DataFrame(chosen_indexes).T.sort_values(by='w',ascending=False)     
             print(df)       
-
-            chosen_index = df.index[0]            
+            if not chosen_index:
+                chosen_index = df.index[0]            
 
             atom_coords = self.defect_phonons.supercell.get_scaled_positions()
             masses = self.defect_phonons.supercell.get_masses()
@@ -94,12 +95,12 @@ class PhononUnfoldingandProjection:
             eigendisplacements = []
             for i in range(len(masses)):
                 eigendisplacements.append(
-                    #eigvec_to_eigdispl(eig_vec=eigenvectors[vector_args['qpt']][vector_args['line']][chosen_index][i*3:i*3+3],
-                    #                   q=qpts[vector_args['qpt']][vector_args['line']],
-                    #                   frac_coords=atom_coords[i],
-                    #                   mass=masses[i]
-                    #                   )
-                    [np.real(x) for x in eigenvectors[vector_args['qpt']][vector_args['line']][chosen_index][i*3:i*3+3]] # testing...
+                    eigvec_to_eigdispl(eig_vec=eigenvectors[vector_args['qpt']][vector_args['line']][chosen_index][i*3:i*3+3],
+                                       q=qpts[vector_args['qpt']][vector_args['line']],
+                                       frac_coords=atom_coords[i],
+                                       mass=masses[i]
+                                       )
+                    #[np.real(x) for x in eigenvectors[vector_args['qpt']][vector_args['line']][chosen_index][i*3:i*3+3]] # testing...
                 )            
 
             chosen_vectors = []
@@ -118,7 +119,6 @@ class PhononUnfoldingandProjection:
         non_indexes = [x for x in range(len(struct)) if x not in list(indexes)]
         if with_vectors and vector_args:
             chosen_vectors = _grab_chosen_vectors(nn)
-            print(chosen_vectors)
             struct.add_site_property('magmom',chosen_vectors)    
 
         struct.remove_sites(non_indexes)
