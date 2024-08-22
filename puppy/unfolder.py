@@ -94,11 +94,12 @@ class PhononUnfoldingandProjection:
             eigendisplacements = []
             for i in range(len(masses)):
                 eigendisplacements.append(
-                    eigvec_to_eigdispl(eig_vec=eigenvectors[vector_args['qpt']][vector_args['line']][chosen_index][i*3:i*3+3],
-                                       q=qpts[vector_args['qpt']][vector_args['line']],
-                                       frac_coords=atom_coords[i],
-                                       mass=masses[i]
-                                       )
+                    #eigvec_to_eigdispl(eig_vec=eigenvectors[vector_args['qpt']][vector_args['line']][chosen_index][i*3:i*3+3],
+                    #                   q=qpts[vector_args['qpt']][vector_args['line']],
+                    #                   frac_coords=atom_coords[i],
+                    #                   mass=masses[i]
+                    #                   )
+                    [np.real(x) for x in eigenvectors[vector_args['qpt']][vector_args['line']][chosen_index][i*3:i*3+3]] # testing...
                 )            
 
             chosen_vectors = []
@@ -237,7 +238,7 @@ class PhononUnfoldingandProjection:
                         for iii, freq in enumerate(line):
                             eigdispl = [np.linalg.norm(
                                 eigvec_to_eigdispl(
-                                        freq[site:site+3],
+                                        freq[site*3:site*3+3],
                                         q=qpts[i][ii],
                                         frac_coords=atom_coords[site],
                                         mass=masses[site])[_direc]
