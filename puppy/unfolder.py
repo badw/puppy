@@ -46,11 +46,10 @@ class PhononUnfoldingandProjection:
                                          vector_args=None,
                                          scale=2,
                                          chosen_index=None):
-        struct = Structure.from_file(self.defect_directory+'SPOSCAR')
-        eigenvectors = self.defect_band_data['eigenvectors']
-        host_frequencies = self.host_band_data['frequencies']
         
-        def _grab_chosen_vectors(nearest_neighbours):
+        struct = Structure.from_file(self.defect_directory+'SPOSCAR')
+        
+        def _grab_chosen_vectors(nearest_neighbours,chosen_index=None):
         
             from pymatgen.io.phonopy import eigvec_to_eigdispl    
 
@@ -64,7 +63,7 @@ class PhononUnfoldingandProjection:
                 threshold = 0.1
             else:
                 threshold = vector_args['threshold']    
-
+            host_frequencies = self.host_band_data['frequencies']
             chosen_frequency = host_frequencies[vector_args['qpt']][vector_args['line']][vector_args['freq']]            
 
             unfolded_frequencies = self.unfold_data['f'] 
@@ -95,7 +94,7 @@ class PhononUnfoldingandProjection:
             eigendisplacements = []
             for i in range(len(masses)):
                 eigendisplacements.append(
-                    eigvec_to_eigdispl(eig_vec=eigenvectors[vector_args['qpt']][vector_args['line']][chosen_index][i*3:i*3+3],
+                    eigvec_to_eigdispl(eig_vec=eigenvectors[vector_args['qpt']][vector_args['line']].T[chosen_index][i*3:i*3+3],
                                        q=qpts[vector_args['qpt']][vector_args['line']],
                                        frac_coords=atom_coords[i],
                                        mass=masses[i]
@@ -118,7 +117,7 @@ class PhononUnfoldingandProjection:
                 indexes.append(ix)
         non_indexes = [x for x in range(len(struct)) if x not in list(indexes)]
         if with_vectors and vector_args:
-            chosen_vectors = _grab_chosen_vectors(nn)
+            chosen_vectors = _grab_chosen_vectors(nn,chosen_index=chosen_index)
             struct.add_site_property('magmom',chosen_vectors)    
 
         struct.remove_sites(non_indexes)
@@ -153,7 +152,7 @@ class PhononUnfoldingandProjection:
 
         
 
-    def get_host_phonons(self):
+    def get_host_phonons(self,eigenvectors=False):
         '''get the host or primitive phonons which the defect phonons will be unfolded back towards
         * currently assumes seekpath and has no manual kpoints mode, but this can be rectified in the future'''
 
@@ -170,7 +169,7 @@ class PhononUnfoldingandProjection:
                                                                      is_const_interval=False)
                 
         ph.run_band_structure(bands,
-                              with_eigenvectors=False,
+                              with_eigenvectors=eigenvectors,
                               path_connections=path_connections,
                               labels=labels) #old - needs to remove get_band_qpoints
 
@@ -194,7 +193,18 @@ class PhononUnfoldingandProjection:
 
         atom_coords = self.defect_phonons.supercell.get_scaled_positions()
         masses = self.defect_phonons.supercell.get_masses()
-        eigenvecs = self.defect_band_data['eigenvectors']
+        eigenvecs = np.array(self.defect_band_data['eigenvectors'])
+        # reformat eigenvecs
+        new_eigenvectors = []
+        for i,q in enumerate(eigenvecs):
+            new_eigenvectors.append([])
+            for ii,l in enumerate(q):
+                new_eigenvectors[i].append(l.T)
+
+        eigenvecs = eigenvecs.swapaxes(3,2)
+        
+
+        #eigenvecs = new_eigenvectors 
         qpts = self.defect_band_data['qpoints']    
 
         if not direction:
@@ -205,7 +215,7 @@ class PhononUnfoldingandProjection:
                     eigendisplacements[atom].append([])
                     for ii, line in enumerate(group):
                         eigendisplacements[atom][i].append([])
-                        for iii, freq in enumerate(line):
+                        for iii, freq in enumerate(line): # this is wrong....
                             eigdispl = [
                                 np.linalg.norm(
                                     eigvec_to_eigdispl(
