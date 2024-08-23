@@ -86,21 +86,10 @@ class PhononUnfoldingandProjection:
 
             atom_coords = self.defect_phonons.supercell.get_scaled_positions()
             masses = self.defect_phonons.supercell.get_masses()
-            qpts = self.defect_band_data['qpoints']       
-
-            atom_indexes = []
-            for i in nn.values():
-                for j in i:
-                    atom_indexes.append(j)            
-
+       
             eigendisplacements = []
             for i in range(len(masses)):
                 eigendisplacements.append(
-                    #eigvec_to_eigdispl(eig_vec=eigenvectors[vector_args['qpt']][vector_args['line']].T[chosen_index][i*3:i*3+3],
-                    #                   q=qpts[vector_args['qpt']][vector_args['line']],
-                    #                   frac_coords=atom_coords[i],
-                    #                   mass=masses[i]
-                    #                   )
                     [np.real(x) for x in eigenvectors[vector_args['qpt']][vector_args['line']].T[chosen_index][i*3:i*3+3]] 
                 )            
 
