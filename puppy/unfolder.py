@@ -40,12 +40,12 @@ class PhononUnfoldingandProjection:
                     f_out.writelines(f_in)
 
 
-    def save_poscar_with_only_neighbours(self,filename='poscar_reduced.vasp',
-                                         use_dummy_atom='K',
-                                         with_vectors=False,
-                                         vector_args=None,
-                                         scale=2,
-                                         chosen_index=None):
+    def return_cage_structure(self,
+                              use_dummy_atom='K',
+                              with_vectors=False,
+                              vector_args=None,
+                              scale=2,
+                              chosen_index=None):
         
         struct = Structure.from_file(self.defect_directory+'SPOSCAR')
         
@@ -78,7 +78,9 @@ class PhononUnfoldingandProjection:
                         chosen_indexes[i] = {'f':f,'w':w}        
 
             df = pd.DataFrame(chosen_indexes).T.sort_values(by='w',ascending=False)     
+            print("possible defect cell modes are:")
             print(df)       
+            print("choosing mode {}".format(df.index[0]))
             if not chosen_index:
                 chosen_index = df.index[0]            
 
@@ -94,19 +96,18 @@ class PhononUnfoldingandProjection:
             eigendisplacements = []
             for i in range(len(masses)):
                 eigendisplacements.append(
-                    eigvec_to_eigdispl(eig_vec=eigenvectors[vector_args['qpt']][vector_args['line']].T[chosen_index][i*3:i*3+3],
-                                       q=qpts[vector_args['qpt']][vector_args['line']],
-                                       frac_coords=atom_coords[i],
-                                       mass=masses[i]
-                                       )
-                    #[np.real(x) for x in eigenvectors[vector_args['qpt']][vector_args['line']][chosen_index][i*3:i*3+3]] # testing...
+                    #eigvec_to_eigdispl(eig_vec=eigenvectors[vector_args['qpt']][vector_args['line']].T[chosen_index][i*3:i*3+3],
+                    #                   q=qpts[vector_args['qpt']][vector_args['line']],
+                    #                   frac_coords=atom_coords[i],
+                    #                   mass=masses[i]
+                    #                   )
+                    [np.real(x) for x in eigenvectors[vector_args['qpt']][vector_args['line']].T[chosen_index][i*3:i*3+3]] 
                 )            
 
             chosen_vectors = []
             max_disp = np.max([np.linalg.norm(x) for x in eigendisplacements])
             for atom in range(len(atom_coords)):
-                chosen_vectors.append([(np.real(x)/max_disp)*scale for x in eigendisplacements[atom]]) # may change max value     to the         max of the atom...            
-#/np.real(np.max(eigendisplacements[atom])))*scale
+                chosen_vectors.append([(np.real(x)/max_disp)*scale for x in eigendisplacements[atom]]) 
             return(chosen_vectors)
         
         nn = self.get_neighbour_sites()    
@@ -124,8 +125,6 @@ class PhononUnfoldingandProjection:
         if use_dummy_atom:
             struct.append(species=use_dummy_atom,
                           coords=self.defect_site.frac_coords)
-        struct.to(filename=filename, fmt='poscar')
-        print('vacancy "cage" saved to {}.'.format(filename))
         return (struct)
 
     def get_neighbour_sites(self):
