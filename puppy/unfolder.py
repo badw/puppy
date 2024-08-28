@@ -29,6 +29,7 @@ class PhononUnfoldingandProjection:
         print("found {} (index = {})".format(vacancy_index,vacancy_index.defect_site_index))
         self.defect_index = vacancy_index.defect_site_index
         self.defect_site = vacancy_index.defect_site
+        self.eigendisplacements = None
 
     def file_unzip(self, 
                    files):
@@ -251,7 +252,7 @@ class PhononUnfoldingandProjection:
 
         self.eigendisplacements = eigendisplacements
 
-    def get_defect_phonons(self):
+    def get_defect_phonons(self,with_eigenvectors=True):
         '''get the defect phonons which will be unfolded'''
 
         self.file_unzip([self.defect_directory+'SPOSCAR.gz',
@@ -266,7 +267,7 @@ class PhononUnfoldingandProjection:
                   log_level=0)
                 
         ph.run_band_structure(bands,
-                              with_eigenvectors=True,
+                              with_eigenvectors=with_eigenvectors,
                               path_connections=path_connections,
                               labels=labels)
         
@@ -421,7 +422,9 @@ class PhononUnfoldingandProjection:
                         for w1 in range(len(unfolded_weights[i]))]
 
             else:
-                cols = [[mcolors.to_rgba(base_colour, alpha=unfolded_weights[i][w1][w2])
+                norm = mcolors.Normalize(vmin=0,vmax=1)
+
+                cols = [[colourmap(unfolded_weights[i][w1][w2],alpha=unfolded_weights[i][w1][w2])
                          for w2 in range(len(unfolded_weights[i][w1]))]
                         for w1 in range(len(unfolded_weights[i]))]
                 
