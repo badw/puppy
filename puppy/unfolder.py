@@ -2,7 +2,6 @@
 import gzip
 import os
 from tqdm import tqdm
-import itertools as it 
 import copy 
 from phonopy import load
 import numpy as np 
@@ -178,7 +177,14 @@ class PhononUnfoldingandProjection:
             else:
                 nn = project_specific_sites
         else:
-            nn = self.get_all_atoms_of_a_type(all_atoms)    
+            if all_atoms == True:
+                cell = self.host_phonons.supercell
+                atom_types = list(dict.fromkeys(cell.get_chemical_symbols()))
+                nn = self.get_all_atoms_of_a_type(atom_types[0])
+                for atom in atom_types[1:]:
+                    nn.update(self.get_all_atoms_of_a_type(atom))
+            else:
+                nn = self.get_all_atoms_of_a_type(all_atoms)    
 
         atom_coords = self.defect_phonons.supercell.get_scaled_positions()
         masses = self.defect_phonons.supercell.get_masses()
