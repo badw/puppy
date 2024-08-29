@@ -133,7 +133,7 @@ class PhononUnfoldingandProjection:
         return(neighbours)
     
     def get_all_atoms_of_a_type(self,atom_type=None):
-        struct = Structure.from_file(self.host_directory+'SPOSCAR')
+        struct = Structure.from_file(self.defect_directory+'SPOSCAR')
         return({atom_type:
                 [i for i,index in enumerate(struct) 
                  if index.species_string == atom_type]})
@@ -180,11 +180,12 @@ class PhononUnfoldingandProjection:
             if all_atoms == True:
                 cell = self.host_phonons.supercell
                 atom_types = list(dict.fromkeys(cell.get_chemical_symbols()))
-                nn = self.get_all_atoms_of_a_type(atom_types[0])
+                nn = self.get_all_atoms_of_a_type(str(atom_types[0]))
                 for atom in atom_types[1:]:
-                    nn.update(self.get_all_atoms_of_a_type(atom))
+                    nn.update(self.get_all_atoms_of_a_type(str(atom)))
             else:
                 nn = self.get_all_atoms_of_a_type(all_atoms)    
+
 
         atom_coords = self.defect_phonons.supercell.get_scaled_positions()
         masses = self.defect_phonons.supercell.get_masses()
