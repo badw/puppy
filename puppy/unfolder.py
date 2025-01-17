@@ -261,17 +261,31 @@ class PhononUnfoldingandProjection:
 
     def get_defect_phonons(self,with_eigenvectors=True):
         '''get the defect phonons which will be unfolded'''
-
-        self.file_unzip([self.defect_directory+'SPOSCAR.gz',
-                         self.defect_directory+'FORCE_SETS.gz'])
+        
+        try:
+            self.file_unzip(
+                [self.defect_directory+'SPOSCAR.gz',
+                 self.defect_directory+'FORCE_SETS.gz']
+            )
+        except Exception:
+            self.file_unzip(
+                [self.defect_directory+'SPOSCAR.gz',
+                 self.defect_directory+'FORCE_CONSTANTS.gz']
+            )
         
         bands,labels,path_connections = get_band_qpoints_by_seekpath(primitive=self.host,
                                                              npoints=self.line_density,
                                                              is_const_interval=False)
         
-        ph = load(supercell_filename=self.defect_directory+'SPOSCAR',
-                  force_sets_filename=self.defect_directory+'FORCE_SETS',
-                  log_level=0)
+        try:
+            ph = load(supercell_filename=self.defect_directory+'SPOSCAR',
+                      force_sets_filename=self.defect_directory+'FORCE_SETS',
+                      log_level=0)
+        except Exception:
+            ph = load(supercell_filename=self.defect_directory+'SPOSCAR',
+                      force_constants_filename=self.defect_directory+'FORCE_CONSTANTS',
+                      log_level=0)
+
                 
         ph.run_band_structure(bands,
                               with_eigenvectors=with_eigenvectors,
