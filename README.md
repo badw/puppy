@@ -39,7 +39,7 @@ an example Jupyter Notebook can be found here:
 ### Pre-Workflow Calculations 
 
 <p align="center">
-<img src="./static/workflow.gif" height="400">
+<img src="./static/workflow.gif" height="600">
 </p>
 
 
