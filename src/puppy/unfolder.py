@@ -25,6 +25,7 @@ class PhononUnfoldingandProjection:
             nearest_neighbour_tolerance: int = 4,
             matrix: np.ndarray = None
     ):
+        
         self.defect_directory = defect_directory
         self.host_directory = host_directory
         self.line_density = line_density
@@ -34,8 +35,6 @@ class PhononUnfoldingandProjection:
         self.eigendisplacements = None
         self.matrix = matrix 
         self.unfold_data = {}
-
-
 
 
     def return_cage_structure(self,
