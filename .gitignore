@@ -1,3 +1,5 @@
-./.DS_Store
-./puppy.egg-info
-./puppy/__pycache__
+**/.DS_Store
+**/puppy.egg-info
+**/puppy/__pycache__
+**/FORCE_SETS
+**/SPOSCAR

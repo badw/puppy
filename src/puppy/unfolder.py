@@ -19,6 +19,7 @@ class PhononUnfoldingandProjection:
                  host_directory,
                  line_density,
                  nearest_neighbour_tolerance):
+        # this needs to change to be able to take in FORCE sets and SPOSCAR from mention or from phonopy/pymatgen objects
         self.defect_directory = defect_directory
         self.host_directory = host_directory
         self.line_density = line_density

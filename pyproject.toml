@@ -1,0 +1,95 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "puppy"
+description="PUPPY - Phonon Unfolding and Projections"
+version = "1.0.0"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Benjamin A. D. Williamson", email = "benjamin.williamson@ntnu.no" }]
+keywords = ["Condensed Matter", "Phonons", "Materials Science"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: Unix",
+    "Operating System :: MacOS",
+]
+requires-python = ">=3.10"
+dependencies = ['tqdm',
+                'pymatgen',
+                'numpy',
+                'phonopy',
+                'matplotlib',
+                'ase',
+                'doped'
+                ]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4.0", "pytest-cov>=3.0.0"]
+
+[project.urls]
+repository = "https://github.com/badw/puppy.git"
+changelog = "https://github.com/badw/puppy/tree/main/CHANGELOG.md"
+
+[tool.setuptools.package-data]
+template = ["py.typed"]
+
+[tool.pyright]
+include = ["puppy"]
+exclude = ["**/__pycache__"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = ["-p no:warnings", "--import-mode=importlib"]
+xfail_strict = true
+log_cli_level = "warn"
+pythonpath = "src"
+testpaths = ["tests"]
+
+skip-magic-trailing-comma = true
+
+[tool.isort]
+profile = 'black'
+skip_gitignore = true
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "except ImportError",
+]
+
+src = ["src"]
+lint.unfixable = [
+  "T20",  # Removes print statements
+  "F841", # Removes unused variables
+]
+lint.pydocstyle.convention = "numpy"
+lint.isort.known-first-party = ["puppy"]
+lint.isort.required-imports = ["from __future__ import annotations"]
+lint.isort.split-on-trailing-comma=false
+extend-include = ["*.ipynb"]
+
+[tool.docformatter]
+pre-summary-newline = true
+black = true
+
+[tool.mypy]
+ignore_missing_imports = true
+namespace_packages = true
+explicit_package_bases = true
+no_implicit_optional = false
+disable_error_code = "annotation-unchecked"

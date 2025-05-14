@@ -1,7 +1,7 @@
 # Phonon Unfolding and Projections (Puppy)
 
 <p align="center">
-<img src="./unfolded.png" height="600">
+<img src="./static/unfolded.png" height="600">
 </p>
 
 > $V_{Ag}$ in AgI
@@ -15,7 +15,7 @@ pip install puppy
 ## Pre-Workflow
 
 <p align="center">
-<img src="./workflow.gif" height="600">
+<img src="./static/workflow.gif" height="600">
 </p>
 
 ## Usage
