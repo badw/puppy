@@ -10,35 +10,32 @@ from phonopy.unfolding.core import Unfolding
 from phonopy.phonon.band_structure import get_band_qpoints_by_seekpath
 from pymatgen.io.phonopy import eigvec_to_eigdispl
 from pymatgen.core import Structure
-from doped.analysis import defect_from_structures
+from puppy.file_io import file_unzip 
+import warnings 
 
 class PhononUnfoldingandProjection:
 
-    def __init__(self,
-                 defect_directory,
-                 host_directory,
-                 line_density,
-                 nearest_neighbour_tolerance):
-        # this needs to change to be able to take in FORCE sets and SPOSCAR from mention or from phonopy/pymatgen objects
+    def __init__(
+        self,
+            defect_directory: str = None,
+            host_directory: str = None,
+            defect_site_index: int = None,
+            defect_site_coords: np.ndarray = None,
+            line_density: int = 100,
+            nearest_neighbour_tolerance: int = 4,
+            matrix: np.ndarray = None
+    ):
         self.defect_directory = defect_directory
         self.host_directory = host_directory
         self.line_density = line_density
-        #self.expansion = expansion
         self.nearest_neighbour_tolerance = nearest_neighbour_tolerance
-        vacancy_index = defect_from_structures(Structure.from_file(host_directory+'SPOSCAR.gz'),Structure.from_file(defect_directory+'SPOSCAR.gz'))
-        print("found {} (index = {})".format(vacancy_index,vacancy_index.defect_site_index))
-        self.defect_index = vacancy_index.defect_site_index
-        self.defect_site = vacancy_index.defect_site
+        self.defect_site_index = defect_site_index
+        self.defect_site_coords = defect_site_coords
         self.eigendisplacements = None
+        self.matrix = matrix 
+        self.unfold_data = {}
 
-    def file_unzip(self, 
-                   files):
-        '''unzips a .gz file if present
-            TODO: remove unzipped files afterwards'''
-        for file in files:
-            if os.path.exists(file):
-                with gzip.open(file, 'rb') as f_in, open(file.replace('.gz', ''), 'wb') as f_out:
-                    f_out.writelines(f_in)
+
 
 
     def return_cage_structure(self,
@@ -114,14 +111,15 @@ class PhononUnfoldingandProjection:
         struct.remove_sites(non_indexes)
         if use_dummy_atom:
             struct.append(species=use_dummy_atom,
-                          coords=self.defect_site.frac_coords)
+                          coords=self.defect_site_coords,
+                          coords_are_cartesian=True) #self.defect_site.frac_coords
         return (struct)
 
     def get_neighbour_sites(self):
             
-        self.file_unzip([self.defect_directory+'SPOSCAR.gz'])
+        file_unzip(files=[self.defect_directory+'SPOSCAR.gz'])
         struct = Structure.from_file(self.defect_directory+'SPOSCAR')
-        nearest_neighbours = struct.get_neighbors_in_shell(origin=self.defect_site.coords,
+        nearest_neighbours = struct.get_neighbors_in_shell(origin=self.defect_site_coords,
                                                            r=0,
                                                            dr=self.nearest_neighbour_tolerance,
                                                            )
@@ -145,7 +143,7 @@ class PhononUnfoldingandProjection:
         '''get the host or primitive phonons which the defect phonons will be unfolded back towards
         * currently assumes seekpath and has no manual kpoints mode, but this can be rectified in the future'''
 
-        self.file_unzip([self.host_directory+'SPOSCAR.gz',
+        file_unzip([self.host_directory+'SPOSCAR.gz',
                          self.host_directory+'FORCE_SETS.gz'])
         
         ph = load(supercell_filename=self.host_directory+'SPOSCAR',
@@ -168,7 +166,13 @@ class PhononUnfoldingandProjection:
         self.labels=labels
         self.host = ph.primitive
         self.host_phonons = ph
-        self.matrix = np.abs(np.linalg.inv(self.host_phonons.primitive_matrix).round(0))
+        if not np.any(self.matrix):
+            warnings.warn('No matrix provided, guessing...')
+            self.matrix = np.abs(np.linalg.inv(self.host_phonons.primitive_matrix).round(0)) 
+
+        self.unfold_data['host_band_data'] = band_data
+        self.unfold_data['path_connections'] = path_connections
+        self.unfold_data['labels'] = labels
     
 
     def eigenvectors_to_eigendisplacements(self, all_atoms=None, project_specific_sites=None, direction=None):
@@ -260,10 +264,12 @@ class PhononUnfoldingandProjection:
 
         self.eigendisplacements = eigendisplacements
 
+        self.unfold_data['eigendisplacements'] = eigendisplacements
+
     def get_defect_phonons(self,with_eigenvectors=True):
         '''get the defect phonons which will be unfolded'''
         
-        self.file_unzip(
+        file_unzip(
             [self.defect_directory+'SPOSCAR.gz',
              self.defect_directory+'FORCE_SETS.gz',
              self.defect_directory+'FORCE_CONSTANTS.gz']
@@ -297,13 +303,15 @@ class PhononUnfoldingandProjection:
         self.special_points = [x[0] for x in ph.band_structure.qpoints]
         self.special_points.append(ph.band_structure.qpoints[-1][-1])
 
+        self.unfold_data['defect_band_data'] = band_data
+
     def unfold(self):
 
         def mp_function(qpoints):
             if not self.matrix.any():
                 self.matrix = np.abs(np.linalg.inv(self.defect_phonons.primitive_matrix).round(0))
             mapping = [x for x in range(self.host_phonons.get_supercell().get_number_of_atoms())]
-            mapping[self.defect_index] = None
+            mapping[self.defect_site_index] = None
             unfold = Unfolding(phonon = self.defect_phonons,
                    supercell_matrix = self.matrix,
                    ideal_positions=self.host_phonons.get_supercell().get_scaled_positions(),
@@ -322,199 +330,6 @@ class PhononUnfoldingandProjection:
             frequencies.append(freqs)
             weights.append(wts)
 
-        self.unfold_data = {'f':frequencies,'w':weights}
+        self.unfold_data['f'] = frequencies
+        self.unfold_data['w'] = weights 
 
-
-    @staticmethod
-    def axes_sizing(path_connections,with_colourbar=True):
-        lefts = [0] 
-        rights = []
-        for i, c in enumerate(path_connections):
-            if not c:
-                lefts.append(i + 1)
-                rights.append(i)
-
-        seg_indices = [list(range(lft, rgt + 1)) for lft, rgt in zip(lefts, rights)]
-        sizing = [len(x) for x in seg_indices]
-        if with_colourbar:
-            sizing.append(0.2) # for the colourbar
-        return(sizing)
-
-    def plot_unfold(self,
-                    custom_axes=None,
-                    base_colour=(0.1,0.1,0.1),
-                    with_prim=False,
-                    prim_colour='tab:Blue',
-                    cmap='viridis',
-                    threshold=0.1,
-                    atom='Li',
-                    ylim=None,
-                    show_lines=True,
-                    plot_kws=None,
-                    legend_kws=None,
-                    figsize=(8,8),
-                    show_colourbar=True):
-                
-        import matplotlib.pyplot as plt 
-        import matplotlib.colors as mcolors
-        from matplotlib.lines import Line2D
-        import matplotlib as mpl 
-        
-        if not plot_kws:
-            plot_kws = {'edgecolor':None,
-                        'linewidths':0,
-                        's':2,
-                        'rasterized':True}
-            
-        if not legend_kws:
-            legend_kws = {'bbox_to_anchor':[0.5,0.9],
-                          'edgecolor':'black',
-                          'loc':'upper right',
-                          'framealpha':1,
-                          'facecolor':'white'}
-
-        legend_lines = [
-            Line2D([0], [0], color=base_colour, alpha=0.5, lw=2),
-            Line2D([0], [0], color=(0.1, 0.1, 0.1), lw=2)
-        ]
-        legend_handles = ['vacancy adjacent {} atoms'.format(atom),
-                        'defect cell']
-
-        
-        unfolded_weights = copy.deepcopy(self.unfold_data['w'])
-        unfolded_freq = self.unfold_data['f']
-
-
-        for i in range(len(unfolded_weights)):
-            unfolded_weights[i][unfolded_weights[i]<threshold] = 0
-
-
-        line = self.host_band_data['distances']
-        path_connections = self.path_connections
-        labels =self.labels
-        distances = self.host_band_data['distances']
-
-        if not np.any(custom_axes):
-            sizing = self.axes_sizing(self.path_connections,with_colourbar=show_colourbar)
-            axiscount = len(sizing)
-            fig,axes = plt.subplots(ncols=axiscount,figsize=figsize,dpi=300,gridspec_kw={'width_ratios':sizing})
-        else:
-            axes = custom_axes
-
-        if with_prim:
-            for dist,freq in zip(self.host_band_data['distances'],self.host_band_data['frequencies']):
-                [ax.plot(dist,freq,color=prim_colour,zorder=1) for ax in axes[:-1]]
-
-            legend_lines.append(Line2D([0],[0],color=prim_colour,lw=2))
-            legend_handles.append('primitive cell')
-
-        axisvlines = [0]
-
-        totallen = len(distances)
-        count = 0 
-        if show_lines:
-            axes[count].axvline(axisvlines[0])
-        colourmap = mpl.colormaps[cmap]
-        for i,(l,connect,label) in enumerate(zip(distances,path_connections,labels)):
-            
-            if not l[0] in axisvlines:
-                if show_lines:
-                    axes[count].axvline(l[0],color='k')
-                axisvlines.append(l[0])
-            if not l[-1] in axisvlines:
-                if show_lines:
-                    axes[count].axvline(l[0],color='k')
-                axisvlines.append(l[-1])
-
-            qpts = [[q for x in range(len(unfolded_freq[i][0]))] for q in line[i]]
-            if self.eigendisplacements and atom:
-                ed = self.eigendisplacements[atom]
-                max_disp = np.max(ed)
-                
-
-                norm = mcolors.Normalize(vmin=np.min(ed/max_disp),vmax=np.max(ed/max_disp))
-
-
-                cols = [[colourmap(ed[i][w1][w2]/max_disp,alpha=unfolded_weights[i][w1][w2])
-                         for w2 in range(len(unfolded_weights[i][w1]))]
-                        for w1 in range(len(unfolded_weights[i]))]
-
-            else:
-                norm = mcolors.Normalize(vmin=0,vmax=1)
-
-                cols = [[colourmap(unfolded_weights[i][w1][w2],alpha=unfolded_weights[i][w1][w2])
-                         for w2 in range(len(unfolded_weights[i][w1]))]
-                        for w1 in range(len(unfolded_weights[i]))]
-                
-            for ii,qq in enumerate(qpts):
-                axes[count].scatter(x=qq,
-                                        y=unfolded_freq[i][ii],
-                                        c=cols[ii],
-                                        norm=norm,
-                                        **plot_kws)
-            
-            if not connect:
-                if not i == totallen:
-                    count+=1    
-
-
-        lefts = [0]
-        rights = []
-        for i, c in enumerate(path_connections):
-            if not c:
-                lefts.append(i + 1)
-                rights.append(i)
-            seg_indices = [list(range(lft, rgt + 1)) for lft, rgt in zip(lefts, rights)]
-            special_points = []
-            for indices in seg_indices:
-                pts = [distances[i][0] for i in indices]
-                pts.append(distances[indices[-1]][-1])
-                special_points.append(pts)        
-
-        l_count = 0         
-        
-        if show_colourbar:
-            for ax, spts in zip(axes[:-1],special_points):
-                ax.set_xticks(spts)
-                ax.set_xlim(spts[0],spts[-1])
-                ax.set_xticklabels(labels[l_count : (l_count + len(spts))])
-                l_count += len(spts)  
-
-        else:
-            for ax, spts in zip(axes,special_points):
-                ax.set_xticks(spts)
-                ax.set_xlim(spts[0],spts[-1])
-                ax.set_xticklabels(labels[l_count : (l_count + len(spts))])
-                l_count += len(spts)  
-
-        
-
-        if not ylim:
-            mi = np.min(self.defect_band_data['frequencies'])
-            ma = np.max(self.defect_band_data['frequencies'])
-            if show_colourbar:
-                [ax.set_ylim(np.round(mi)-2,np.round(ma)+2) for ax in axes[0:-1]]
-            else:
-                [ax.set_ylim(np.round(mi)-2,np.round(ma)+2) for ax in axes]
-                
-        else:
-            if show_colourbar:
-                [ax.set_ylim(ylim[0],ylim[1]) for ax in axes[0:-1]]
-            else:
-                [ax.set_ylim(ylim[0],ylim[1]) for ax in axes]
-        
-        if show_colourbar:
-            mpl.colorbar.Colorbar(axes[-1],cmap=cmap,norm=norm)
-            axes[-1].set_ylabel('normalised displacement (arb. units)')
-
-        if not np.any(custom_axes):
-            axes[0].set_ylabel('Frequency (THz)')
-            fig.legend(legend_lines,legend_handles,**legend_kws)
-        else:
-            axes[0].legend(legend_lines,legend_handles,**legend_kws)
-
-        if not np.any(custom_axes):
-            fig.tight_layout()
-            #plt.tight_layout()   
-            #plt.show() 
-            return(fig,axes)
