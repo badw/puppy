@@ -124,17 +124,26 @@ class PuppyPlotter:
 
                 norm = mcolors.Normalize(vmin=np.min(ed/max_disp),vmax=np.max(ed/max_disp))
 
-
-                cols = [[colourmap(ed[i][w1][w2]/max_disp,alpha=unfolded_weights[i][w1][w2])
-                         for w2 in range(len(unfolded_weights[i][w1]))]
-                        for w1 in range(len(unfolded_weights[i]))]
+                cols = [
+                    [
+                        colourmap(ed[i][w1][w2]/max_disp,
+                                  alpha=unfolded_weights[i][w1][w2])
+                        for w2 in range(len(unfolded_weights[i][w1]))
+                    ]
+                    for w1 in range(len(unfolded_weights[i]))
+                ]
 
             else:
                 norm = mcolors.Normalize(vmin=0,vmax=1)
 
-                cols = [[colourmap(unfolded_weights[i][w1][w2],alpha=unfolded_weights[i][w1][w2])
-                         for w2 in range(len(unfolded_weights[i][w1]))]
-                        for w1 in range(len(unfolded_weights[i]))]
+                cols = [
+                    [
+                        colourmap(
+                            unfolded_weights[i][w1][w2], alpha=unfolded_weights[i][w1][w2])
+                        for w2 in range(len(unfolded_weights[i][w1]))
+                    ]
+                    for w1 in range(len(unfolded_weights[i]))
+                ]
                 
             for ii,qq in enumerate(qpts):
                 axes[count].scatter(x=qq,
