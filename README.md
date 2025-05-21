@@ -36,19 +36,3 @@ an example Jupyter Notebook can be found here:
 <p align="center">
 <img src="./static/unfolded.png" height="400">
 </p>
-
-
-
-### Pre-Workflow Calculations 
-
-<p align="center">
-<img src="./static/workflow.gif" height="600">
-</p>
-
-
-## Todo:
-
-- [ ] multiprocess some features
-- [ ] add a spectral function
-- [ ] change from a scatter plot 
-- [ ] make it work for non vacancies
