@@ -10,25 +10,26 @@ from phonopy.unfolding.core import Unfolding
 from phonopy.phonon.band_structure import get_band_qpoints_by_seekpath,get_band_qpoints
 from pymatgen.io.phonopy import eigvec_to_eigdispl
 from pymatgen.core import Structure
-import pymatgen
 from puppy.file_io import file_unzip 
-import warnings 
+
+import tqdm_pathos 
+import tqdm 
 
 class PhononUnfoldingandProjection:
 
     def __init__(
         self,
-            defect_directory: str = None,
-            host_directory: str = None,
-            defect_site_index: int = None,
-            defect_site_coords: np.ndarray = None,
+            supercell_directory: str,
+            host_directory: str,
+            defect_site_index: int,
+            defect_site_coords: np.ndarray,
+            matrix: np.ndarray,
             line_density: int = 100,
             nearest_neighbour_tolerance: int = 4,
-            matrix: np.ndarray = None,
             **kws
     ):
         
-        self.defect_directory = defect_directory
+        self.supercell_directory = supercell_directory
         self.host_directory = host_directory
         self.line_density = line_density
         self.nearest_neighbour_tolerance = nearest_neighbour_tolerance
@@ -37,6 +38,7 @@ class PhononUnfoldingandProjection:
         self.eigendisplacements = None
         self.matrix = matrix 
         self.unfold_data = {}
+        
         self.__dict__.update(kws)
 
     def get_defect_neighbour_sites(
@@ -55,14 +57,17 @@ class PhononUnfoldingandProjection:
         #######
         self.__dict__.update(kws)
 
+        if self.defect_site_coords is None: 
+            raise AttributeError('no defect_site_coords given')
+
         file_unzip(
-            files=[self.defect_directory+'SPOSCAR.gz']
+            files=[self.supercell_directory+'SPOSCAR.gz']
             ) 
         
         if nearest_neighbour_tolerance:
             self.nearest_neighbour_tolerance = nearest_neighbour_tolerance
         
-        struct = Structure.from_file(self.defect_directory+'SPOSCAR')
+        struct = Structure.from_file(self.supercell_directory+'SPOSCAR')
         #######
         nearest_neighbours = struct.get_neighbors_in_shell(
             origin=self.defect_site_coords,
@@ -84,7 +89,6 @@ class PhononUnfoldingandProjection:
     
     def get_all_atoms_of_a_specie(
             self,
-            defect_structure: Structure,
             atom_type: str
     ):
         """
@@ -97,7 +101,7 @@ class PhononUnfoldingandProjection:
             dict: a dictionary with a list of all the atoms of a specific type
         """
         ###### need to pass a Structure object 
-        struct = Structure.from_file(self.defect_directory+'SPOSCAR')
+        struct = Structure.from_file(self.supercell_directory+'SPOSCAR')
         ######
         
         return (
@@ -112,7 +116,7 @@ class PhononUnfoldingandProjection:
     def get_host_phonons(
             self,
             calculate_eigenvectors: bool = False,
-            line_density:int=200,
+            **kws
     ):
         """
         get the host or primitive phonons which the defect phonons will be unfolded back towards
@@ -121,6 +125,8 @@ class PhononUnfoldingandProjection:
         Returns:
             None
         """
+
+        self.__dict__.update(kws)
 
         #check files are unzipped
         file_unzip(
@@ -145,7 +151,7 @@ class PhononUnfoldingandProjection:
         
         bands, labels, path_connections = get_band_qpoints_by_seekpath(
                 primitive=ph.primitive,
-                npoints=line_density,
+                npoints=self.line_density,
                 is_const_interval=False
             )
 
@@ -175,9 +181,9 @@ class PhononUnfoldingandProjection:
         
         
         file_unzip(
-            [self.defect_directory+'SPOSCAR.gz',
-             self.defect_directory+'FORCE_SETS.gz',
-             self.defect_directory+'FORCE_CONSTANTS.gz']
+            [self.supercell_directory+'SPOSCAR.gz',
+             self.supercell_directory+'FORCE_SETS.gz',
+             self.supercell_directory+'FORCE_CONSTANTS.gz']
         )
 
         bands, labels, path_connections = get_band_qpoints_by_seekpath(
@@ -188,15 +194,20 @@ class PhononUnfoldingandProjection:
 
         try:
             ph = load(
-                supercell_filename=self.defect_directory+'SPOSCAR',
-                force_sets_filename=self.defect_directory+'FORCE_SETS',
-                log_level=0
+                supercell_filename=self.supercell_directory+'SPOSCAR',
+                force_sets_filename=self.supercell_directory+'FORCE_SETS',
+                log_level=0,
+                primitive_matrix='auto',
+                supercell_matrix=[[1,0,0],[0,1,0],[0,0,1]]
             )
-        except Exception:
+        except Exception as e:
+            print(e)
             ph = load(
-                supercell_filename=self.defect_directory+'SPOSCAR',
-                force_constants_filename=self.defect_directory+'FORCE_CONSTANTS',
-                log_level=0
+                supercell_filename=self.supercell_directory+'SPOSCAR',
+                force_constants_filename=self.supercell_directory+'FORCE_CONSTANTS',
+                log_level=0,
+                primitive_matrix='auto',
+                supercell_matrix=[[1,0,0],[0,1,0],[0,0,1]]
             )
 
         ph.run_band_structure(
@@ -228,7 +239,7 @@ class PhononUnfoldingandProjection:
             else:
                 nn = project_specific_sites
         else:
-            if all_atoms == True:
+            if all_atoms:
                 cell = self.host_phonons.supercell
                 atom_types = list(dict.fromkeys(cell.get_chemical_symbols()))
                 nn = self.get_all_atoms_of_a_specie(str(atom_types[0]))
@@ -256,7 +267,7 @@ class PhononUnfoldingandProjection:
 
         if not direction:
             eigendisplacements = {}
-            for atom, sites in tqdm(nn.items(),desc='generating_eigendisplacements...'):
+            for atom, sites in tqdm.tqdm(nn.items(),desc='generating_eigendisplacements...'):
                 eigendisplacements[atom] = []
                 for i, group in enumerate(eigenvecs):
                     eigendisplacements[atom].append([])
@@ -312,34 +323,43 @@ class PhononUnfoldingandProjection:
 
         self.unfold_data['eigendisplacements'] = eigendisplacements
 
-
-
-    def unfold(self):
-
-        def mp_function(qpoints):
-            if not self.matrix.any():
-                self.matrix = np.abs(np.linalg.inv(self.defect_phonons.primitive_matrix).round(0))
-            mapping = [x for x in range(self.host_phonons.get_supercell().get_number_of_atoms())]
-            mapping[self.defect_site_index] = None
-            unfold = Unfolding(
-                phonon=self.defect_phonons,
-                supercell_matrix=self.matrix,
-                ideal_positions=self.host_phonons.get_supercell().get_scaled_positions(),
-                atom_mapping=mapping,
-                qpoints=qpoints
-            )
-            unfold.run()
-            weights = unfold.get_unfolding_weights()
-            freqs = unfold.get_frequencies()
-            return([freqs,weights])
+    def _unfold_function(self,qpoints,**kws):
+        self.__dict__.update(kws)
         
+        unfold = Unfolding(
+            phonon=self.defect_phonons,
+            supercell_matrix=self.matrix,
+            ideal_positions=self.host_phonons.get_supercell().get_scaled_positions(),
+            atom_mapping=self.mapping,
+            qpoints=qpoints # can we make this 1 qpoint?
+        )
+
+        unfold.run()
+        weights = unfold.unfolding_weights
+        freqs = unfold.frequencies
+
+        return([freqs,weights])
+
+    def unfold(self, **kws):
+        #set the atom mappings - defect vacancy = None 
+        self.mapping = [
+            x for x in range(
+                self.host_phonons.get_supercell().get_number_of_atoms()
+                )
+            ]
+        if self.defect_site_index:
+            self.mapping[self.defect_site_index] = None
+
+        qpoints = self.unfold_data['host_band_data']['qpoints']
+
         frequencies = []
         weights = []
-        for q in tqdm(self.unfold_data['host_band_data']['qpoints'],desc='unfolding phonons...'):
-            freqs,wts = mp_function(q)
+        for q_set in tqdm.tqdm(qpoints,desc='unfolding phonons...'):
+            freqs,wts = self._unfold_function(q_set)
             frequencies.append(freqs)
             weights.append(wts)
 
         self.unfold_data['f'] = frequencies
         self.unfold_data['w'] = weights 
 
+        return([frequencies,weights])

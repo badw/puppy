@@ -8,15 +8,16 @@ import copy
 class PuppyPlotter:
 
     def __init__(self,unfold_data:dict):
-        self.eigendisplacements = unfold_data['eigendisplacements']
+        try:
+            self.eigendisplacements = unfold_data['eigendisplacements']
+        except Exception:
+            self.eigendisplacements = None 
         self.host_band_data = unfold_data['host_band_data']
         self.defect_band_data = unfold_data['defect_band_data']
         self.unfold_data = {'f':unfold_data['f'],
                             'w':unfold_data['w']}
         self.path_connections = unfold_data['path_connections']
         self.labels = unfold_data['labels'] 
-
-
 
     @staticmethod
     def axes_sizing(path_connections,with_colourbar=True):
@@ -67,16 +68,17 @@ class PuppyPlotter:
             Line2D([0], [0], color=base_colour, alpha=0.5, lw=2),
             Line2D([0], [0], color=(0.1, 0.1, 0.1), lw=2)
         ]
-        legend_handles = ['vacancy adjacent {} atoms'.format(atom),
+        legend_handles = ['chosen {} atoms'.format(atom),
                         'defect cell']
 
         
         unfolded_weights = copy.deepcopy(self.unfold_data['w'])
         unfolded_freq = self.unfold_data['f']
 
+        #unfolded_weights = unfolded_weights / unfolded_weights.max()
 
         for i in range(len(unfolded_weights)):
-            unfolded_weights[i][unfolded_weights[i]<threshold] = 0
+            unfolded_weights[i][unfolded_weights[i]< threshold] = 0
 
 
         line = self.host_band_data['distances']

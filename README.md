@@ -12,6 +12,8 @@
   </ul>
 </div>
 
+`! Currently in Development - use with caution ! `
+
 `puppy` is a code for unfolding defect phonons and projecting atomic eigendisplacements onto phonon dispersion curves.
 
 ### Installation
