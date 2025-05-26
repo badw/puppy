@@ -1,221 +1,176 @@
-import matplotlib.pyplot as plt 
-import matplotlib.colors as mcolors
-from matplotlib.lines import Line2D
+from matplotlib.collections import LineCollection
+from matplotlib.colors import colorConverter, Normalize
+from matplotlib import colormaps 
 import matplotlib as mpl 
+import matplotlib.pyplot as plt 
 import numpy as np 
-import copy 
+from puppy.unfolder import PhononUnfoldingandProjection
+from matplotlib.colorbar import Colorbar
+
 
 class PuppyPlotter:
+    def __init__(self,puppy,**kws):
+        if isinstance(puppy,PhononUnfoldingandProjection):
+            self.__dict__.update(puppy.as_dict())
+        elif isinstance(puppy,dict):
+            self.__dict__.update(puppy)
+        else:
+            raise TypeError("puppy must be a PhononUnfoldingandProjection object or a dictionary representation of it.")
+        
 
-    def __init__(self,unfold_data:dict):
-        try:
-            self.eigendisplacements = unfold_data['eigendisplacements']
-        except Exception:
-            self.eigendisplacements = None 
-        self.host_band_data = unfold_data['host_band_data']
-        self.defect_band_data = unfold_data['defect_band_data']
-        self.unfold_data = {'f':unfold_data['f'],
-                            'w':unfold_data['w']}
-        self.path_connections = unfold_data['path_connections']
-        self.labels = unfold_data['labels'] 
-
-    @staticmethod
-    def axes_sizing(path_connections,with_colourbar=True):
-        lefts = [0] 
+        self.__dict__.update(kws)
+        
+    def axes_sizing(self,with_colourbar=True):
+        lefts = [0]
         rights = []
-        for i, c in enumerate(path_connections):
+        for i, c in enumerate(self.path_connections):
             if not c:
                 lefts.append(i + 1)
-                rights.append(i)
+                rights.append(i)    
 
         seg_indices = [list(range(lft, rgt + 1)) for lft, rgt in zip(lefts, rights)]
         sizing = [len(x) for x in seg_indices]
         if with_colourbar:
-            sizing.append(0.2) # for the colourbar
-        return(sizing)
+            sizing.append(0.2)  # for the colourbar
+        return sizing
 
-    def plot_unfold(self,
-                    custom_axes=None,
-                    base_colour=(0.1,0.1,0.1),
-                    with_prim=False,
-                    prim_colour='tab:Blue',
-                    cmap='viridis',
-                    threshold=0.1,
-                    atom='Li',
-                    ylim=None,
-                    show_lines=True,
-                    plot_kws=None,
-                    legend_kws=None,
-                    figsize=(8,8),
-                    show_colourbar=True):
-                
-
-        
-        if not plot_kws:
-            plot_kws = {'edgecolor':None,
-                        'linewidths':0,
-                        's':2,
-                        'rasterized':True}
-            
-        if not legend_kws:
-            legend_kws = {'bbox_to_anchor':[0.5,0.9],
-                          'edgecolor':'black',
-                          'loc':'upper right',
-                          'framealpha':1,
-                          'facecolor':'white'}
-
-        legend_lines = [
-            Line2D([0], [0], color=base_colour, alpha=0.5, lw=2),
-            Line2D([0], [0], color=(0.1, 0.1, 0.1), lw=2)
-        ]
-        legend_handles = ['chosen {} atoms'.format(atom),
-                        'defect cell']
-
-        
-        unfolded_weights = copy.deepcopy(self.unfold_data['w'])
-        unfolded_freq = self.unfold_data['f']
-
-        #unfolded_weights = unfolded_weights / unfolded_weights.max()
-
-        for i in range(len(unfolded_weights)):
-            unfolded_weights[i][unfolded_weights[i]< threshold] = 0
-
-
-        line = self.host_band_data['distances']
-        path_connections = self.path_connections
-        labels =self.labels
-        distances = self.host_band_data['distances']
-
-        if not np.any(custom_axes):
-            sizing = self.axes_sizing(self.path_connections,with_colourbar=show_colourbar)
-            axiscount = len(sizing)
-            fig,axes = plt.subplots(ncols=axiscount,figsize=figsize,dpi=300,gridspec_kw={'width_ratios':sizing})
-        else:
-            axes = custom_axes
-
-        if with_prim:
-            for dist,freq in zip(self.host_band_data['distances'],self.host_band_data['frequencies']):
-                [ax.plot(dist,freq,color=prim_colour,zorder=1) for ax in axes[:-1]]
-
-            legend_lines.append(Line2D([0],[0],color=prim_colour,lw=2))
-            legend_handles.append('primitive cell')
-
-        axisvlines = [0]
-
-        totallen = len(distances)
-        count = 0 
-        if show_lines:
-            axes[count].axvline(axisvlines[0])
-        colourmap = mpl.colormaps[cmap]
-        for i,(l,connect,label) in enumerate(zip(distances,path_connections,labels)):
-            
-            if not l[0] in axisvlines:
-                if show_lines:
-                    axes[count].axvline(l[0],color='k')
-                axisvlines.append(l[0])
-            if not l[-1] in axisvlines:
-                if show_lines:
-                    axes[count].axvline(l[0],color='k')
-                axisvlines.append(l[-1])
-
-            qpts = [[q for x in range(len(unfolded_freq[i][0]))] for q in line[i]]
-            if self.eigendisplacements and atom:
-                ed = self.eigendisplacements[atom]
-                max_disp = np.max(ed)
-                
-
-                norm = mcolors.Normalize(vmin=np.min(ed/max_disp),vmax=np.max(ed/max_disp))
-
-                cols = [
-                    [
-                        colourmap(ed[i][w1][w2]/max_disp,
-                                  alpha=unfolded_weights[i][w1][w2])
-                        for w2 in range(len(unfolded_weights[i][w1]))
-                    ]
-                    for w1 in range(len(unfolded_weights[i]))
-                ]
-
-            else:
-                norm = mcolors.Normalize(vmin=0,vmax=1)
-
-                cols = [
-                    [
-                        colourmap(
-                            unfolded_weights[i][w1][w2], alpha=unfolded_weights[i][w1][w2])
-                        for w2 in range(len(unfolded_weights[i][w1]))
-                    ]
-                    for w1 in range(len(unfolded_weights[i]))
-                ]
-                
-            for ii,qq in enumerate(qpts):
-                axes[count].scatter(x=qq,
-                                        y=unfolded_freq[i][ii],
-                                        c=cols[ii],
-                                        norm=norm,
-                                        **plot_kws)
-            
-            if not connect:
-                if not i == totallen:
-                    count+=1    
-
-
+    def get_special_points(self):
         lefts = [0]
         rights = []
-        for i, c in enumerate(path_connections):
+        for i, c in enumerate(self.path_connections):
             if not c:
                 lefts.append(i + 1)
                 rights.append(i)
             seg_indices = [list(range(lft, rgt + 1)) for lft, rgt in zip(lefts, rights)]
-            special_points = []
+            special_points = [] 
             for indices in seg_indices:
-                pts = [distances[i][0] for i in indices]
-                pts.append(distances[indices[-1]][-1])
-                special_points.append(pts)        
-
-        l_count = 0         
+                pts = [self.distances[i][0] for i in indices]
+                pts.append(self.distances[indices[-1]][-1])
+                special_points.append(pts)   
         
-        if show_colourbar:
-            for ax, spts in zip(axes[:-1],special_points):
-                ax.set_xticks(spts)
-                ax.set_xlim(spts[0],spts[-1])
-                ax.set_xticklabels(labels[l_count : (l_count + len(spts))])
-                l_count += len(spts)  
+        return(special_points)
+
+    def plot(
+            self,
+            figsize=(6,6),
+            dpi=300,
+            plot_primitive=False,
+            primitive_colour='tab:grey',
+            colourmap='cividis',
+            linewidth=1,
+            with_colourbar=True,
+            ):
+        
+        #cmap = colormaps[colourmap]
+
+        axes_sizes = self.axes_sizing(with_colourbar=with_colourbar)
+
+        fig,axes = plt.subplots(
+            ncols=len(axes_sizes),figsize=figsize,dpi=dpi,gridspec_kw={'width_ratios':axes_sizes},
+            )
+        # colour based on eigendisplacements, or if no eigendisplacements are given then on unfolding weights
+        if np.any(self.eigendisplacements):
+            #normalised
+            colouring = self.eigendisplacements / self.eigendisplacements.max()
+            axes[-1].set_ylabel('Normalised Eigendisplacement (arb. units)')
 
         else:
-            for ax, spts in zip(axes,special_points):
-                ax.set_xticks(spts)
-                ax.set_xlim(spts[0],spts[-1])
-                ax.set_xticklabels(labels[l_count : (l_count + len(spts))])
-                l_count += len(spts)  
+            colouring = self.weights / self.weights.max()
+            axes[-1].set_ylabel('Normalised Weights (arb. units)')
 
         
+        norm = Normalize(colouring.min(),colouring.max())
 
-        if not ylim:
-            mi = np.min(self.defect_band_data['frequencies'])
-            ma = np.max(self.defect_band_data['frequencies'])
-            if show_colourbar:
-                [ax.set_ylim(np.round(mi)-2,np.round(ma)+2) for ax in axes[0:-1]]
-            else:
-                [ax.set_ylim(np.round(mi)-2,np.round(ma)+2) for ax in axes]
-                
-        else:
-            if show_colourbar:
-                [ax.set_ylim(ylim[0],ylim[1]) for ax in axes[0:-1]]
-            else:
-                [ax.set_ylim(ylim[0],ylim[1]) for ax in axes]
+        special_points = self.get_special_points()
+
+        if plot_primitive: # this needs to be better
+
+            for dist,freq in zip(
+                self.distances,
+                self.primitive_frequencies
+                ):
+                [
+                    ax.plot(
+                        dist,
+                        freq,
+                        zorder=1,
+                        color=primitive_colour,
+                        alpha=0.3,
+                        linestyle='dotted'
+                        ) for ax in axes[:-1]
+                    ]
+
+
+        linewidth = 1
+        count = 0
+        ii=0
+        for (
+            subdistances,
+            path_connection,
+            label,
+            subfrequencies,
+            subweights,
+            subcolouring,
+        ) in zip(
+            self.distances,
+            self.path_connections,
+            self.labels,
+            self.frequencies,
+            self.weights,
+            colouring,
+        ):  
         
-        if show_colourbar:
-            mpl.colorbar.Colorbar(axes[-1],cmap=cmap,norm=norm)
-            axes[-1].set_ylabel('normalised displacement (arb. units)')
+            dist = np.array(
+            [subdistances]*subfrequencies.shape[1]
+            )
 
-        if not np.any(custom_axes):
-            axes[0].set_ylabel('Frequency (THz)')
-            fig.legend(legend_lines,legend_handles,**legend_kws)
-        else:
-            axes[0].legend(legend_lines,legend_handles,**legend_kws)
+    
+            for i in range(len(dist)):
+                x = dist[i]
+                y = subfrequencies.T[i]
+                points = np.array(
+                    [x,y]
+                    ).T.reshape(-1,1,2)    
 
-        if not np.any(custom_axes):
-            fig.tight_layout()
-            #plt.tight_layout()   
-            #plt.show() 
-            return(fig,axes)
+                lwidths = subweights[:,:].T[i]*linewidth #.flatten()    
+
+                segments = np.concatenate([points[:-1], points[1:]], axis=1)
+            
+                colors = [norm(col) for col in subcolouring.T[i]]    
+
+                alphas = np.abs(lwidths.T / (linewidth + 0.001))    
+
+                l = LineCollection(
+                    segments,
+                    cmap=colourmap,
+                    alpha=alphas,
+                    linewidths=lwidths.T,
+                    antialiased=True,
+                    )
+                l.set_array(colors)    
+
+                axes[count].add_collection(l)
+
+            axes[count].set_ylim(np.min(self.frequencies),np.max(self.frequencies))
+            axes[count].set_xlim(special_points[count][0],special_points[count][-1])
+            if count>=1:
+                axes[count].set_yticklabels([])
+                axes[count].set_yticks([])
+
+            ii+=1
+            if not path_connection: 
+                if not ii == len(self.qpaths):
+                    count+=1
+
+        cbar = Colorbar(axes[-1],cmap=colourmap,norm=norm)
+        l_count = 0 
+        for ax, spts in zip(axes[:-1],special_points):
+            ax.set_xticks(spts)
+            ax.set_xlim(spts[0],spts[-1])
+            ax.set_xticklabels(self.labels[l_count : (l_count + len(spts))])
+            l_count += len(spts)    
+
+        axes[0].set_ylabel('Frequency (THz)')    
+    
+
+        return(fig,ax) #plt.show()
