@@ -173,4 +173,4 @@ class PuppyPlotter:
         axes[0].set_ylabel('Frequency (THz)')    
     
 
-        return(fig,ax) #plt.show()
+        return(fig,axes) #plt.show()
