@@ -16,11 +16,12 @@ class PhononUnfoldingandProjection:
             supercell_directory: str,
             host_directory: str,
             smatrix: np.ndarray,
-            primitive_matrix = 'P',
+            primitive_matrix: Optional[np.ndarray] = None,
             defect_site_index: Optional[int] = None,
             defect_site_coords: Optional[np.ndarray] = None,
             line_density: int = 100,
             nearest_neighbour_tolerance: int = 4,
+            ideal_positions: Optional[np.ndarray] = None, 
             **kws
     ):
         warnings.filterwarnings("ignore", category=DeprecationWarning)         
@@ -33,7 +34,11 @@ class PhononUnfoldingandProjection:
         self.defect_site_coords = defect_site_coords
         self.eigendisplacements = None
         self.smatrix = smatrix 
-        self.primitive_matrix = primitive_matrix
+        if primitive_matrix:
+            self.primitive_matrix = primitive_matrix
+        else:
+            self.primitive_matrix = 'P'
+        self.ideal_positions = ideal_positions
         
         self.__dict__.update(kws)
 
@@ -162,9 +167,11 @@ class PhononUnfoldingandProjection:
             #path_connections=self.path_connections,
             #labels=self.labels
         )  
-
-        self.ideal_positions = ph.supercell.scaled_positions
+        
+        if self.ideal_positions is None:
+            self.ideal_positions = ph.supercell.scaled_positions
         self.site_mapping = [i for i in range(len(self.ideal_positions))]
+
         if self.defect_site_index:
             if self.defect_site_index > len(self.site_mapping):
                 self.site_mapping.append(self.defect_site_index)
@@ -317,7 +324,6 @@ class PhononUnfoldingandProjection:
             qpaths='auto',
             projected_sites=None,
             tqdm_kwargs={},
-            **kws
             ):
         """
         runs the phonopy.Unfolding algorithm for each qpoint in turn 
@@ -339,14 +345,6 @@ class PhononUnfoldingandProjection:
         supercell_phonons = self.get_supercell_phonons(qpaths=self.qpaths)
 
         qpoint_list = np.array(self.qpaths).flatten().reshape(-1,3)
-#       import tqdm_pathos
-#       unfold = tqdm_pathos.map(
-#            self.unfold_per_qpoint_phonopy,
-#            qpoint_list,
-#            supercell_phonons=supercell_phonons,
-#            projected_sites=projected_sites,
-#            **kws
-#            )
 
         unfold = np.array(
             [
@@ -354,7 +352,6 @@ class PhononUnfoldingandProjection:
                     qpoint=qpoint,
                     supercell_phonons=supercell_phonons,
                     projected_sites=projected_sites,
-                    **kws,
                 )
                 for qpoint in tqdm.tqdm(qpoint_list,desc='Unfolding phonons...',**tqdm_kwargs)
             ]
