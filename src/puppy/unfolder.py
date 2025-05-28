@@ -16,6 +16,7 @@ class PhononUnfoldingandProjection:
             supercell_directory: str,
             host_directory: str,
             smatrix: np.ndarray,
+            primitive_matrix = 'P',
             defect_site_index: Optional[int] = None,
             defect_site_coords: Optional[np.ndarray] = None,
             line_density: int = 100,
@@ -32,6 +33,7 @@ class PhononUnfoldingandProjection:
         self.defect_site_coords = defect_site_coords
         self.eigendisplacements = None
         self.smatrix = smatrix 
+        self.primitive_matrix = primitive_matrix
         
         self.__dict__.update(kws)
 
@@ -193,7 +195,7 @@ class PhononUnfoldingandProjection:
                 supercell_filename=self.supercell_directory+'SPOSCAR',
                 force_sets_filename=self.supercell_directory+'FORCE_SETS',
                 log_level=0,
-                primitive_matrix='P',
+                primitive_matrix=self.primitive_matrix,
                 supercell_matrix=[[1,0,0],[0,1,0],[0,0,1]],
                 is_symmetry=False,
                 symprec=1e-10,
@@ -204,7 +206,7 @@ class PhononUnfoldingandProjection:
                 supercell_filename=self.supercell_directory+'SPOSCAR',
                 force_constants_filename=self.supercell_directory+'FORCE_CONSTANTS',
                 log_level=0,
-                primitive_matrix='P',
+                primitive_matrix=self.primitive_matrix,
                 supercell_matrix=[[1,0,0],[0,1,0],[0,0,1]],
                 is_compact_fc=False,
             )
