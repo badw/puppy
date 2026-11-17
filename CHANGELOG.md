@@ -13,3 +13,4 @@
 6. **fix:** `get_defect_neighbour_sites` (undefined `file_unzip`), `primitive_matrix` given as an array, and custom `qpaths`
 7. **new:** unfolded spectral function `A(k, w)` and partial spectral functions `A^{XX'}(k, w)` for elements or any groups of sites (Ikeda et al., PRB 95, 024305 (2017)), with optional averaging over the star of k: `run_unfold(groups=..., average_star=True)`, `get_spectral_function()`, `PuppyPlotter.plot_spectral_function()`
 8. **new:** tests in `tests/` (checked against `phonopy.unfolding.core.Unfolding`)
+9. **fix:** FORCE_SETS generated with `phonopy -d --tolerance X` failed to load ("Input forces are not enough..."). The tolerance is now read from `phonopy_disp.yaml` in the calculation directory, or given with `symprec=` / `host_symprec=`

@@ -44,8 +44,34 @@ def _find_file(directory: str, name: str) -> Optional[str]:
     return None
 
 
-def _load_phonopy(directory: str, primitive_matrix="P", **kws):
-    """Load SPOSCAR + FORCE_SETS/FORCE_CONSTANTS with SPOSCAR as the cell itself."""
+def _find_symprec(directory: str) -> Optional[float]:
+    """symmetry tolerance used to generate the displacements (from phonopy yaml)"""
+    import yaml
+
+    for name in ("phonopy_disp.yaml", "phonopy.yaml", "phonopy_params.yaml"):
+        path = os.path.join(directory, name)
+        if not os.path.exists(path):
+            continue
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        tol = (data or {}).get("phonopy", {}).get("symmetry_tolerance")
+        if tol is not None:
+            return float(tol)
+    return None
+
+
+def _load_phonopy(directory: str, primitive_matrix="P", symprec=None, **kws):
+    """
+    Load SPOSCAR + FORCE_SETS/FORCE_CONSTANTS with SPOSCAR as the cell itself.
+
+    FORCE_SETS made with symmetry must be loaded with the same symmetry tolerance
+    used to generate the displacements; it is read from phonopy_disp.yaml (or
+    phonopy.yaml) in ``directory`` if ``symprec`` is not given.
+    """
+    if symprec is None:
+        symprec = _find_symprec(directory)
+    if symprec is not None:
+        kws["symprec"] = symprec
     sposcar = _find_file(directory, "SPOSCAR")
     if sposcar is None:
         raise FileNotFoundError(f"no SPOSCAR found in {directory}")
@@ -64,9 +90,21 @@ def _load_phonopy(directory: str, primitive_matrix="P", **kws):
         log_level=0,
         **kws,
     )
-    if force_sets is not None:
+    if force_sets is None:
+        return load(force_constants_filename=force_constants, **common)
+    try:
         return load(force_sets_filename=force_sets, **common)
-    return load(force_constants_filename=force_constants, **common)
+    except ValueError as err:
+        if "not enough to calculate force constants" not in str(err):
+            raise
+        raise ValueError(
+            f"phonopy could not rebuild the force constants from {force_sets}. "
+            "The symmetry found now differs from the one used to generate the "
+            "displacements: pass symprec=<the --tolerance used with phonopy -d> "
+            "(or keep phonopy_disp.yaml in the directory so it is read "
+            "automatically), and check that SPOSCAR is the exact cell the "
+            "displacements were generated from."
+        ) from err
 
 
 class PhononUnfoldingandProjection:
@@ -83,6 +121,8 @@ class PhononUnfoldingandProjection:
         ideal_positions: Optional[np.ndarray] = None,
         site_mapping: Optional[list] = None,
         mapping_tolerance: float = 1.0,
+        symprec: Optional[float] = None,
+        host_symprec: Optional[float] = None,
         **kws,
     ):
         """
@@ -111,6 +151,10 @@ class PhononUnfoldingandProjection:
             mapping_tolerance: max distance (Angstrom) between a supercell atom and
                 an ideal site for the atom to be assigned to that site. Atoms that
                 cannot be assigned are treated as interstitials.
+            symprec, host_symprec: symmetry tolerance used when the displacements
+                of the supercell / host were generated (``phonopy -d --tolerance``).
+                Read from phonopy_disp.yaml in the directory if present, otherwise
+                phonopy's default (1e-5).
         """
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -130,6 +174,8 @@ class PhononUnfoldingandProjection:
         self.ideal_positions = ideal_positions
         self.site_mapping = site_mapping
         self.mapping_tolerance = mapping_tolerance
+        self.symprec = symprec
+        self.host_symprec = host_symprec
 
         self.labels = None
         self.path_connections = None
@@ -217,7 +263,11 @@ class PhononUnfoldingandProjection:
         Returns:
             phonopy.Phonopy of the host
         """
-        ph = _load_phonopy(self.host_directory, primitive_matrix=self._host_primitive_matrix())
+        ph = _load_phonopy(
+            self.host_directory,
+            primitive_matrix=self._host_primitive_matrix(),
+            symprec=self.host_symprec,
+        )
 
         # matrix of the supercell (SPOSCAR) relative to the primitive cell
         umat = np.linalg.inv(ph.primitive_matrix)
@@ -280,7 +330,9 @@ class PhononUnfoldingandProjection:
         """
         # symmetry must stay on: FORCE_SETS are usually symmetry-reduced
         # displacement sets (is_symmetry=False makes phonopy fail on them)
-        ph = _load_phonopy(self.supercell_directory, primitive_matrix="P")
+        ph = _load_phonopy(
+            self.supercell_directory, primitive_matrix="P", symprec=self.symprec
+        )
         self.supercell_atom_coords = ph.supercell.scaled_positions
         self.masses = ph.supercell.masses
         self.symbols = list(ph.supercell.symbols)
