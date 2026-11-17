@@ -35,3 +35,23 @@ an example Jupyter Notebook can be found here:
 <p align="center">
 <img src="./static/unfolded.png" height="400">
 </p>
+
+### Spectral functions
+
+The unfolded spectral function of [Ikeda *et al.*, PRB **95**, 024305 (2017)](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.95.024305),
+
+$$A(\mathbf{k},\omega) = \sum_J W_J(\mathbf{k})\,\delta(\omega-\omega_J),$$
+
+is the unfolding weights $W_J$ placed at the supercell frequencies and broadened (Lorentzian, HWHM 0.05 THz by default).
+Partial spectral functions $A^{XX'}$ for elements (or any groups of sites) sum to $A$:
+
+```python
+puppy.run_unfold(groups="elements", average_star=True)  # or groups={"near": [...], "far": [...]}
+w, A, A_partial = puppy.get_spectral_function(width=0.05, partial=True)
+
+from puppy.plotting import PuppyPlotter
+pp = PuppyPlotter(puppy)
+pp.plot_spectral_function(log=True)                    # total
+pp.plot_spectral_function(spectral=A_partial[:, :, 1, 1], log=True)  # e.g. Ag-Ag
+```
+
